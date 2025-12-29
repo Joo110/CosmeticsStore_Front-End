@@ -1,12 +1,14 @@
 import React, { useMemo, useState, useEffect, type KeyboardEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { toast } from 'react-toastify';
 import { useProducts, useProductsByCategoryName } from '../hooks/useProducts';
+import { useAddToCart } from '../../Carts/hooks/useAddToCart';
+import authService from '../../Users/Services/authService';
 import type { ProductsQuery } from '../../../types/product.types';
 import type { Product as ProductType } from '../../../types/product.types';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
-
 
 /**
  * Derived item shape used inside this component.
@@ -168,9 +170,51 @@ const ProductGrid: React.FC<ProductGridProps> = ({
   const endIndex = startIndex + itemsPerPage;
   const currentProducts = derivedProducts.slice(startIndex, endIndex);
 
-  const handleAddToCart = (productId: string, variantId: string) => {
-    if (onAddToCart) onAddToCart(productId, variantId);
-    else console.log('Add to cart (noop):', productId, variantId);
+  // useAddToCart hook for adding items
+  const { addItem, loading: addLoading,  } = useAddToCart();
+
+  // When ProductCardInline calls handleAddToCart(productId, variantId) this will run
+  const handleAddToCart = async (productId: string, variantId: string) => {
+    try {
+      if (!variantId) {
+        toast.error(t('unable_add_cart', 'Unable to add to cart: invalid variant id'));
+        return;
+      }
+
+      // call parent's callback if provided (preserve original behavior)
+      if (onAddToCart) {
+        try {
+          onAddToCart(productId, variantId);
+        } catch {
+          // swallow errors from parent callback to not break add flow
+        }
+      }
+
+      const currentUser = authService.getCurrentUser();
+      if (!currentUser) {
+        toast.info(t('login_to_add_cart', 'Please login to add items to cart'));
+        return;
+      }
+
+      const cartItemRequest = {
+        userId: currentUser.userId,
+        productVariantId: variantId,
+        quantity: 1,
+      };
+
+      const result = await addItem(cartItemRequest);
+      if (result) {
+        toast.success(t('added_to_cart_success', '✅ Added item to cart successfully!'));
+      } else {
+        toast.error(t('failed_add_cart', 'Failed to add to cart'));
+      }
+    } catch (error: any) {
+      if (error?.response?.status === 401) {
+        toast.warning(t('session_expired', 'Session expired. Please login again.'));
+      } else {
+        toast.error(t('unexpected_error', 'An unexpected error occurred'));
+      }
+    }
   };
 
   if (error) {
@@ -330,6 +374,7 @@ const ProductGrid: React.FC<ProductGridProps> = ({
                     className="flex-1 bg-gradient-to-r from-[#5D2D2C] to-[#7a3a38] text-white py-2 sm:py-2.5 lg:py-3 rounded-lg sm:rounded-xl font-semibold text-xs sm:text-sm lg:text-base hover:shadow-lg transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#5D2D2C] active:scale-95"
                     aria-label={t('add_to_cart', 'Add to cart')}
                     type="button"
+                    disabled={addLoading}
                   >
                     {t('add_to_cart', 'Add to cart')}
                   </button>
@@ -378,7 +423,7 @@ const ProductGrid: React.FC<ProductGridProps> = ({
 
       {/* Loading State */}
       {loading ? (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4 md:gap-5 lg:gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 md:gap-5 lg:gap-6">
           {[...Array(12)].map((_, i) => (
             <div key={i} className="animate-pulse" aria-hidden>
               <div className="bg-gray-200 aspect-square rounded-2xl mb-3"></div>
@@ -390,7 +435,7 @@ const ProductGrid: React.FC<ProductGridProps> = ({
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4 md:gap-5 lg:gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 md:gap-5 lg:gap-6">
             {currentProducts.map((item) => {
               // preserve original key generation behavior
               // eslint-disable-next-line react-hooks/purity
