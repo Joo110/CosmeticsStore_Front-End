@@ -8,8 +8,12 @@ export interface UpdateCartItemRequest {
   quantity: number;
 }
 
+export interface Cart {
+  id: string;
+}
+
 export interface CartItemResponse {
-  itemId: string;
+  id: string;
   productVariantId: string;
   title?: string | null;
   unitPriceAmount: number;

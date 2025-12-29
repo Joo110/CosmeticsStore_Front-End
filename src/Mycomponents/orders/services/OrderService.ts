@@ -28,10 +28,11 @@ class OrderService {
   }
 
   // ✅ إضافة: Get user's own orders
-  async getMyOrders(): Promise<OrderDto[]> {
-    const response = await api.get<OrderDto[]>('/Orders/my-orders');
-    return response.data;
-  }
+async getMyOrders(userId: string): Promise<OrderDto[]> {
+  const response = await api.get<OrderDto[]>(`/Orders/my-orders/${userId}`);
+  return response.data;
+}
+
 
   // Get single order by id
   async getOrderById(id: string): Promise<OrderDto> {

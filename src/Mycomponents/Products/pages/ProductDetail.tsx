@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, type JSX, type KeyboardEvent } from 'react';
+import { useState, useMemo, useEffect, type JSX, type KeyboardEvent } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Heart, ShoppingCart, Star, Minus, Plus, Share2, ChevronLeft, ChevronRight } from 'lucide-react';

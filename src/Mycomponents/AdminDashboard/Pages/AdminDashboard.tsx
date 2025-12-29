@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import  { useState, useEffect } from 'react';
 import { Plus, Edit2, Trash2, X, Search, Menu } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
@@ -80,7 +80,7 @@ const AdminDashboard = () => {
     { orderId: '001', customerName: 'Ahmed Mohamed', items: 3, total: 1500, status: 'Pending', date: '2025-12-20' },
     { orderId: '002', customerName: 'Sarah Ali', items: 2, total: 850, status: 'Completed', date: '2025-12-19' }
   ]);
-  const [payments, setPayments] = useState<Payment[]>([
+  const [payments] = useState<Payment[]>([
     { paymentId: 'P001', orderId: '002', amount: 850, method: 'Credit Card', status: 'Completed', date: '2025-12-19' },
     { paymentId: 'P002', orderId: '001', amount: 1500, method: 'Cash', status: 'Pending', date: '2025-12-20' }
   ]);
@@ -149,6 +149,7 @@ const AdminDashboard = () => {
 
     const product: Product = {
       ...newProduct,
+      // eslint-disable-next-line react-hooks/purity
       productId: Math.random().toString(),
       createdAtUtc: new Date().toISOString()
     };
