@@ -29,6 +29,20 @@ interface ShippingInfo {
   postalCode: string;
 }
 
+interface CartItem {
+  id: string | number;
+  productVariantId: string | number;
+  title?: string;
+  unitPriceAmount?: number;
+  unitPrice?: number;
+  quantity?: number;
+}
+
+interface CartWithItems {
+  id: string | number;
+  items?: CartItem[];
+}
+
 // Add cartId to context so components can call backend with real cart id
 interface CartContextType {
   cartId: string | null;
@@ -65,18 +79,21 @@ const CartProvider: React.FC<{ children: ReactNode; userId?: string | undefined 
   const [shippingInfo, setShippingInfo] = useState<ShippingInfo | null>(null);
 
   useEffect(() => {
-    if (!cart?.items || cart.items.length === 0) {
-  // eslint-disable-next-line react-hooks/set-state-in-effect    
+    // Type assertion to handle the items property
+    const cartWithItems = cart as CartWithItems | null;
+    
+    if (!cartWithItems?.items || cartWithItems.items.length === 0) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect    
       setProducts([]);
       return;
     }
 
-    const mapped: Product[] = cart.items.map((item: any) => ({
+    const mapped: Product[] = cartWithItems.items.map((item: CartItem) => ({
       id: String(item.id),
       productVariantId: String(item.productVariantId),
-      name: String(item.title ?? ''),
+      name: String((item as any).title ?? ''),
       brand: '',
-      price: Number(item.unitPriceAmount ?? item.unitPrice ?? 0),
+      price: Number((item as any).unitPriceAmount ?? (item as any).unitPrice ?? 0),
       quantity: Number(item.quantity ?? 1),
       image: undefined,
     }));
@@ -129,8 +146,7 @@ const CartProvider: React.FC<{ children: ReactNode; userId?: string | undefined 
 const isValidName = (name: string) => {
   const trimmed = name.trim();
   if (trimmed.length < 2) return false;
-  // removed unnecessary escape before dot inside char class
-  const re = /^[\p{L}\s\-.'ـ]{2,}$/u;
+  const re = /^[\p{L}\s\-.'\u0640]{2,}$/u;
   return re.test(trimmed);
 };
 
@@ -176,7 +192,6 @@ const luhnCheck = (cardNumber: string) => {
 
 const isValidExpiry = (mmYY: string) => {
   const cleaned = mmYY.replace(/\s/g, '');
-  // avoid unnecessary escaped characters, use non-capturing group for separator
   const m = cleaned.match(/^(\d{2})(?:\/|-)?(\d{2})$/);
   if (!m) return false;
   const month = parseInt(m[1], 10);
@@ -200,25 +215,25 @@ const ProductCard: React.FC<{ product: Product }> = ({ product }) => {
   const { updateQuantity, cartId } = useCart();
   const { removeItem, loading: removing, error: removeError } = useRemoveCartItem();
 
- const handleRemove = async () => {
-  if (!cartId) {
-    console.error('Cart ID is missing');
-    return;
-  }
-
-  try {
-    const result = await removeItem(cartId, product.id);
-          window.location.reload();
-
-    if (result) {
-      window.location.reload();
-    } else {
-      console.error('Failed to remove item from cart');
+  const handleRemove = async () => {
+    if (!cartId) {
+      console.error('Cart ID is missing');
+      return;
     }
-  } catch (error) {
-    console.error('Error removing item:', error);
-  }
-};
+
+    try {
+      const result = await removeItem(cartId, product.id);
+      window.location.reload();
+
+      if (result) {
+        window.location.reload();
+      } else {
+        console.error('Failed to remove item from cart');
+      }
+    } catch (error) {
+      console.error('Error removing item:', error);
+    }
+  };
 
   return (
     <div className="bg-gray-50 rounded-lg p-4 mb-3">
