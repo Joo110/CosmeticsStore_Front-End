@@ -3,7 +3,7 @@ import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { AuthProvider } from './contexts/AuthProvider';
 import ProtectedRoute from './components/ProtectedRoute';
-import './i18n'; // ⚠️ مهم جدًا!
+import './i18n';
 
 import Navbar from '../src/Mycomponents/dashboard/layout/Navbar';
 import LandingPage from '../src/Mycomponents/dashboard/layout/LandingPage';
@@ -24,6 +24,7 @@ import RegisterPage from '../src/Mycomponents/Users/pages/RegisterPage';
 import ForgotPasswordPage from '../src/Mycomponents/Users/pages/ForgotPasswordPage';
 import ProfilePage from '../src/Mycomponents/Users/pages/ProfilePage';
 import ProductGridWrapper from './Mycomponents/Categories/pages/ProductGridWrapper';
+
 
 //OrderPage
 import OrdersPage from './Mycomponents/orders/page/OrdersPage';

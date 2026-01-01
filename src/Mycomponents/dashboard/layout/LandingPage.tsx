@@ -14,6 +14,8 @@ export default function LandingPage() {
       buttonText: t('shop_now'),
       badge: t('up_to_70_off'),
       bgGradient: 'from-rose-50 via-pink-50 to-purple-50',
+      image:
+        'https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?auto=format&fit=crop&w=1400&q=80',
     },
     {
       id: 2,
@@ -22,6 +24,8 @@ export default function LandingPage() {
       buttonText: t('explore_now'),
       badge: t('new_arrival'),
       bgGradient: 'from-blue-50 via-indigo-50 to-purple-50',
+      image:
+        'https://i.pinimg.com/736x/b8/ca/1a/b8ca1ac427c8a626aa8c0e2d90bf25be.jpg',
     },
     {
       id: 3,
@@ -30,6 +34,8 @@ export default function LandingPage() {
       buttonText: t('shop_collection'),
       badge: t('premium_quality'),
       bgGradient: 'from-amber-50 via-orange-50 to-red-50',
+      image:
+        'https://i.pinimg.com/736x/3b/d8/f7/3bd8f7b478da8b6c27f34b729cef7f31.jpg',
     },
   ];
 
@@ -55,46 +61,60 @@ export default function LandingPage() {
 
   return (
     <div className="relative bg-gray-50">
-      {/* Hero Slider - Enhanced with navigation arrows */}
+      {/* Hero Slider - Images hidden on small screens (mobile) */}
       <div className="relative h-[450px] sm:h-[550px] md:h-[650px] overflow-hidden bg-white">
         {slides.map((slide, index) => (
           <div
             key={slide.id}
-            className={`absolute inset-0 transition-all duration-700 ${
-              index === activeSlide ? 'opacity-100 scale-100' : 'opacity-0 scale-105'
+            className={`absolute inset-0 transition-opacity duration-700 ${
+              index === activeSlide ? 'opacity-100 z-10' : 'opacity-0 z-0'
             }`}
+            aria-hidden={index === activeSlide ? 'false' : 'true'}
           >
-            <div className={`absolute inset-0 bg-gradient-to-br ${slide.bgGradient}`}></div>
-            
+            <div className={`absolute inset-0 bg-gradient-to-br ${slide.bgGradient} mix-blend-overlay`}></div>
+
             <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-full flex items-center">
-              <div className="max-w-2xl w-full">
-                {/* Badge */}
-                <span className="inline-block bg-[#5D2D2C] text-white text-xs sm:text-sm font-semibold px-4 py-1.5 rounded-full mb-4 sm:mb-6 animate-pulse">
-                  {slide.badge}
-                </span>
-                
-                <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-gray-900 mb-4 sm:mb-6 leading-tight">
-                  {slide.title}
-                </h1>
-                <p className="text-base sm:text-lg md:text-xl text-gray-700 mb-6 sm:mb-8 leading-relaxed max-w-xl">
-                  {slide.description}
-                </p>
-                
-                <div className="flex flex-wrap gap-4">
-                 <button
-                  className="bg-[#5D2D2C] hover:bg-[#4a2422] text-white font-semibold px-8 py-3.5 rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl hover:scale-105 text-sm sm:text-base"
-                  onClick={() => window.scrollBy({ top: 1900, behavior: 'smooth' })}
-                >
-                  {slide.buttonText}
-                </button>
+              <div className="w-full grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
+                {/* Text Column */}
+                <div className="order-2 md:order-1 max-w-2xl">
+                  <span className="inline-block bg-[#5D2D2C] text-white text-xs sm:text-sm font-semibold px-4 py-1.5 rounded-full mb-4 sm:mb-6 animate-pulse">
+                    {slide.badge}
+                  </span>
 
-                 <button
-                  className="bg-white hover:bg-gray-50 text-[#5D2D2C] font-semibold px-8 py-3.5 rounded-xl transition-all duration-200 shadow-md hover:shadow-lg border-2 border-[#5D2D2C] text-sm sm:text-base"
-                  onClick={() => window.scrollBy({ top: 1300, behavior: 'smooth' })}
-                >
-                  {t('learn_more') || 'Learn More'}
-                </button>
+                  <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-gray-900 mb-4 sm:mb-6 leading-tight">
+                    {slide.title}
+                  </h1>
+                  <p className="text-base sm:text-lg md:text-xl text-gray-700 mb-6 sm:mb-8 leading-relaxed max-w-xl">
+                    {slide.description}
+                  </p>
 
+                  <div className="flex flex-wrap gap-4">
+                    <button
+                      className="bg-[#5D2D2C] hover:bg-[#4a2422] text-white font-semibold px-8 py-3.5 rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl hover:scale-105 text-sm sm:text-base"
+                      onClick={() => window.scrollBy({ top: 1900, behavior: 'smooth' })}
+                    >
+                      {slide.buttonText}
+                    </button>
+
+                    <button
+                      className="bg-white hover:bg-gray-50 text-[#5D2D2C] font-semibold px-8 py-3.5 rounded-xl transition-all duration-200 shadow-md hover:shadow-lg border-2 border-[#5D2D2C] text-sm sm:text-base"
+                      onClick={() => window.scrollBy({ top: 1300, behavior: 'smooth' })}
+                    >
+                      {t('learn_more') || 'Learn More'}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Image Column — hidden on small screens to match your request */}
+                <div className="hidden sm:block order-1 md:order-2 h-56 md:h-80 lg:h-96 w-full rounded-2xl overflow-hidden shadow-2xl bg-gray-100">
+                  <img
+                    src={slide.image}
+                    alt={slide.title}
+                    loading="lazy"
+                    className={`w-full h-full object-cover transition-transform duration-1000 ease-out ${
+                      index === activeSlide ? 'scale-100' : 'scale-105'
+                    }`}
+                  />
                 </div>
               </div>
             </div>
@@ -272,122 +292,117 @@ export default function LandingPage() {
         </div>
       </section>
 
-
-         {/* Summer Top Deals */}
+      {/* Summer Top Deals */}
       <ProductsSection title={t('summer_top_deals')} limit={40} onAddToCart={handleAddToCart} />
 
-{/* Statistics Section */}
-<section className="py-16 sm:py-20 bg-gradient-to-br from-[#5D2D2C] via-[#7d3d3c] to-[#5D2D2C] relative overflow-hidden">
-  {/* Background Decoration */}
-  <div className="absolute inset-0 opacity-10">
-    <div className="absolute top-0 right-0 w-96 h-96 bg-white rounded-full translate-x-1/3 -translate-y-1/3"></div>
-    <div className="absolute bottom-0 left-0 w-96 h-96 bg-white rounded-full -translate-x-1/3 translate-y-1/3"></div>
-  </div>
+      {/* Statistics Section (unchanged) */}
+      <section className="py-16 sm:py-20 bg-gradient-to-br from-[#5D2D2C] via-[#7d3d3c] to-[#5D2D2C] relative overflow-hidden">
+        {/* ...rest unchanged... */}
+        <div className="absolute inset-0 opacity-10">
+          <div className="absolute top-0 right-0 w-96 h-96 bg-white rounded-full translate-x-1/3 -translate-y-1/3"></div>
+          <div className="absolute bottom-0 left-0 w-96 h-96 bg-white rounded-full -translate-x-1/3 translate-y-1/3"></div>
+        </div>
 
-  <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-    {/* Header */}
-    <div className="text-center mb-12">
-      <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white mb-4">
-        {t('stats_trusted_by')}
-      </h2>
-      <p className="text-white/80 text-base sm:text-lg max-w-2xl mx-auto">
-        {t('stats_description')}
-      </p>
-    </div>
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          {/* Header */}
+          <div className="text-center mb-12">
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white mb-4">
+              {t('stats_trusted_by')}
+            </h2>
+            <p className="text-white/80 text-base sm:text-lg max-w-2xl mx-auto">
+              {t('stats_description')}
+            </p>
+          </div>
 
-    {/* Stats Grid */}
-    <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8">
-      {/* Stat 1 */}
-      <div className="text-center">
-        <div className="bg-white/10 backdrop-blur-sm rounded-3xl p-6 sm:p-8 hover:bg-white/15 transition-all duration-300">
-          <div className="text-4xl sm:text-5xl lg:text-6xl font-bold text-white mb-2">
-            50K+
+          {/* Stats Grid */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8">
+            {/* Stat cards... (kept exactly as before) */}
+            <div className="text-center">
+              <div className="bg-white/10 backdrop-blur-sm rounded-3xl p-6 sm:p-8 hover:bg-white/15 transition-all duration-300">
+                <div className="text-4xl sm:text-5xl lg:text-6xl font-bold text-white mb-2">
+                  50K+
+                </div>
+                <div className="text-white/90 text-sm sm:text-base font-medium mb-1">
+                  {t('stat_happy_customers')}
+                </div>
+                <div className="text-white/60 text-xs sm:text-sm">
+                  {t('stat_worldwide')}
+                </div>
+              </div>
+            </div>
+
+            <div className="text-center">
+              <div className="bg-white/10 backdrop-blur-sm rounded-3xl p-6 sm:p-8 hover:bg-white/15 transition-all duration-300">
+                <div className="text-4xl sm:text-5xl lg:text-6xl font-bold text-white mb-2">
+                  98%
+                </div>
+                <div className="text-white/90 text-sm sm:text-base font-medium mb-1">
+                  {t('stat_satisfaction_rate')}
+                </div>
+                <div className="text-white/60 text-xs sm:text-sm">
+                  {t('stat_5_star_reviews')}
+                </div>
+              </div>
+            </div>
+
+            <div className="text-center">
+              <div className="bg-white/10 backdrop-blur-sm rounded-3xl p-6 sm:p-8 hover:bg-white/15 transition-all duration-300">
+                <div className="text-4xl sm:text-5xl lg:text-6xl font-bold text-white mb-2">
+                  200+
+                </div>
+                <div className="text-white/90 text-sm sm:text-base font-medium mb-1">
+                  {t('stat_premium_products')}
+                </div>
+                <div className="text-white/60 text-xs sm:text-sm">
+                  {t('stat_curated_collection')}
+                </div>
+              </div>
+            </div>
+
+            <div className="text-center">
+              <div className="bg-white/10 backdrop-blur-sm rounded-3xl p-6 sm:p-8 hover:bg-white/15 transition-all duration-300">
+                <div className="text-4xl sm:text-5xl lg:text-6xl font-bold text-white mb-2">
+                  15+
+                </div>
+                <div className="text-white/90 text-sm sm:text-base font-medium mb-1">
+                  {t('stat_years_experience')}
+                </div>
+                <div className="text-white/60 text-xs sm:text-sm">
+                  {t('stat_in_beauty_industry')}
+                </div>
+              </div>
+            </div>
           </div>
-          <div className="text-white/90 text-sm sm:text-base font-medium mb-1">
-            {t('stat_happy_customers')}
-          </div>
-          <div className="text-white/60 text-xs sm:text-sm">
-            {t('stat_worldwide')}
+
+          {/* Bottom Trust Badges */}
+          <div className="mt-12 pt-12 border-t border-white/20">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
+              <div className="text-white/90">
+                <div className="text-2xl mb-2">🚚</div>
+                <p className="text-sm font-medium">{t('stat_free_shipping')}</p>
+                <p className="text-xs text-white/60">{t('stat_free_shipping_desc')}</p>
+              </div>
+              <div className="text-white/90">
+                <div className="text-2xl mb-2">🔒</div>
+                <p className="text-sm font-medium">{t('stat_secure_payment')}</p>
+                <p className="text-xs text-white/60">{t('stat_secure_payment_desc')}</p>
+              </div>
+              <div className="text-white/90">
+                <div className="text-2xl mb-2">♻️</div>
+                <p className="text-sm font-medium">{t('stat_easy_returns')}</p>
+                <p className="text-xs text-white/60">{t('stat_easy_returns_desc')}</p>
+              </div>
+              <div className="text-white/90">
+                <div className="text-2xl mb-2">💝</div>
+                <p className="text-sm font-medium">{t('stat_premium_quality')}</p>
+                <p className="text-xs text-white/60">{t('stat_premium_quality_desc')}</p>
+              </div>
+            </div>
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* Stat 2 */}
-      <div className="text-center">
-        <div className="bg-white/10 backdrop-blur-sm rounded-3xl p-6 sm:p-8 hover:bg-white/15 transition-all duration-300">
-          <div className="text-4xl sm:text-5xl lg:text-6xl font-bold text-white mb-2">
-            98%
-          </div>
-          <div className="text-white/90 text-sm sm:text-base font-medium mb-1">
-            {t('stat_satisfaction_rate')}
-          </div>
-          <div className="text-white/60 text-xs sm:text-sm">
-            {t('stat_5_star_reviews')}
-          </div>
-        </div>
-      </div>
-
-      {/* Stat 3 */}
-      <div className="text-center">
-        <div className="bg-white/10 backdrop-blur-sm rounded-3xl p-6 sm:p-8 hover:bg-white/15 transition-all duration-300">
-          <div className="text-4xl sm:text-5xl lg:text-6xl font-bold text-white mb-2">
-            200+
-          </div>
-          <div className="text-white/90 text-sm sm:text-base font-medium mb-1">
-            {t('stat_premium_products')}
-          </div>
-          <div className="text-white/60 text-xs sm:text-sm">
-            {t('stat_curated_collection')}
-          </div>
-        </div>
-      </div>
-
-      {/* Stat 4 */}
-      <div className="text-center">
-        <div className="bg-white/10 backdrop-blur-sm rounded-3xl p-6 sm:p-8 hover:bg-white/15 transition-all duration-300">
-          <div className="text-4xl sm:text-5xl lg:text-6xl font-bold text-white mb-2">
-            15+
-          </div>
-          <div className="text-white/90 text-sm sm:text-base font-medium mb-1">
-            {t('stat_years_experience')}
-          </div>
-          <div className="text-white/60 text-xs sm:text-sm">
-            {t('stat_in_beauty_industry')}
-          </div>
-        </div>
-      </div>
-    </div>
-
-    {/* Bottom Trust Badges */}
-    <div className="mt-12 pt-12 border-t border-white/20">
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
-        <div className="text-white/90">
-          <div className="text-2xl mb-2">🚚</div>
-          <p className="text-sm font-medium">{t('stat_free_shipping')}</p>
-          <p className="text-xs text-white/60">{t('stat_free_shipping_desc')}</p>
-        </div>
-        <div className="text-white/90">
-          <div className="text-2xl mb-2">🔒</div>
-          <p className="text-sm font-medium">{t('stat_secure_payment')}</p>
-          <p className="text-xs text-white/60">{t('stat_secure_payment_desc')}</p>
-        </div>
-        <div className="text-white/90">
-          <div className="text-2xl mb-2">♻️</div>
-          <p className="text-sm font-medium">{t('stat_easy_returns')}</p>
-          <p className="text-xs text-white/60">{t('stat_easy_returns_desc')}</p>
-        </div>
-        <div className="text-white/90">
-          <div className="text-2xl mb-2">💝</div>
-          <p className="text-sm font-medium">{t('stat_premium_quality')}</p>
-          <p className="text-xs text-white/60">{t('stat_premium_quality_desc')}</p>
-        </div>
-      </div>
-    </div>
-  </div>
-</section>
-
-
-      {/* Footer - Enhanced */}
+      {/* Footer - Enhanced (unchanged) */}
       <footer className="bg-gray-900 text-white py-12 sm:py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-8 sm:gap-10">

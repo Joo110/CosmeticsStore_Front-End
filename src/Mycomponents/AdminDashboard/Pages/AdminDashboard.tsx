@@ -2,7 +2,7 @@ import  { useState, useEffect } from 'react';
 import { Plus, Edit2, Trash2, X, Search, Menu } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-// Types
+/* Types */
 interface ProductVariant {
   productVariantId?: string;
   sku: string;
@@ -257,50 +257,45 @@ const AdminDashboard = () => {
       <nav className="bg-white shadow-md" style={{ background: '#5D2D2C' }}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <h1 className="text-xl sm:text-2xl font-bold text-white">{t('admin_dashboard', 'Admin Dashboard')}</h1>
+            <h1 className="text-lg sm:text-2xl font-bold text-white">{t('admin_dashboard', 'Admin Dashboard')}</h1>
             
             {/* Mobile menu button */}
-            <button
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="lg:hidden text-white p-2"
-            >
-              <Menu size={24} />
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                className="lg:hidden text-white p-2"
+                aria-label={t('open_menu', 'Open menu')}
+              >
+                <Menu size={22} />
+              </button>
 
-            {/* Desktop Navigation */}
-            <div className="hidden lg:flex space-x-4">
-              <button
-                onClick={() => setActiveTab('products')}
-                className={`px-4 py-2 rounded-lg font-medium transition ${
-                  activeTab === 'products' ? 'bg-white text-[#5D2D2C]' : 'text-white hover:bg-white/20'
-                }`}
-              >
-                {t('products_tab', 'Products')}
-              </button>
-              <button
-                onClick={() => setActiveTab('orders')}
-                className={`px-4 py-2 rounded-lg font-medium transition ${
-                  activeTab === 'orders' ? 'bg-white text-[#5D2D2C]' : 'text-white hover:bg-white/20'
-                }`}
-              >
-                {t('orders_tab', 'Orders')}
-              </button>
-              <button
-                onClick={() => setActiveTab('payments')}
-                className={`px-4 py-2 rounded-lg font-medium transition ${
-                  activeTab === 'payments' ? 'bg-white text-[#5D2D2C]' : 'text-white hover:bg-white/20'
-                }`}
-              >
-                {t('payments_tab', 'Payments')}
-              </button>
-              <button
-                onClick={() => setActiveTab('users')}
-                className={`px-4 py-2 rounded-lg font-medium transition ${
-                  activeTab === 'users' ? 'bg-white text-[#5D2D2C]' : 'text-white hover:bg-white/20'
-                }`}
-              >
-                {t('users_tab', 'Users')}
-              </button>
+              {/* Desktop Navigation */}
+              <div className="hidden lg:flex space-x-4">
+                <button
+                  onClick={() => setActiveTab('products')}
+                  className={`px-4 py-2 rounded-lg font-medium transition ${activeTab === 'products' ? 'bg-white text-[#5D2D2C]' : 'text-white hover:bg-white/20'}`}
+                >
+                  {t('products_tab', 'Products')}
+                </button>
+                <button
+                  onClick={() => setActiveTab('orders')}
+                  className={`px-4 py-2 rounded-lg font-medium transition ${activeTab === 'orders' ? 'bg-white text-[#5D2D2C]' : 'text-white hover:bg-white/20'}`}
+                >
+                  {t('orders_tab', 'Orders')}
+                </button>
+                <button
+                  onClick={() => setActiveTab('payments')}
+                  className={`px-4 py-2 rounded-lg font-medium transition ${activeTab === 'payments' ? 'bg-white text-[#5D2D2C]' : 'text-white hover:bg-white/20'}`}
+                >
+                  {t('payments_tab', 'Payments')}
+                </button>
+                <button
+                  onClick={() => setActiveTab('users')}
+                  className={`px-4 py-2 rounded-lg font-medium transition ${activeTab === 'users' ? 'bg-white text-[#5D2D2C]' : 'text-white hover:bg-white/20'}`}
+                >
+                  {t('users_tab', 'Users')}
+                </button>
+              </div>
             </div>
           </div>
 
@@ -312,9 +307,7 @@ const AdminDashboard = () => {
                   setActiveTab('products');
                   setMobileMenuOpen(false);
                 }}
-                className={`w-full text-left px-4 py-2 rounded-lg font-medium transition ${
-                  activeTab === 'products' ? 'bg-white text-[#5D2D2C]' : 'text-white hover:bg-white/20'
-                }`}
+                className={`w-full text-left px-4 py-2 rounded-lg font-medium transition ${activeTab === 'products' ? 'bg-white text-[#5D2D2C]' : 'text-white hover:bg-white/20'}`}
               >
                 {t('products_tab', 'Products')}
               </button>
@@ -323,9 +316,7 @@ const AdminDashboard = () => {
                   setActiveTab('orders');
                   setMobileMenuOpen(false);
                 }}
-                className={`w-full text-left px-4 py-2 rounded-lg font-medium transition ${
-                  activeTab === 'orders' ? 'bg-white text-[#5D2D2C]' : 'text-white hover:bg-white/20'
-                }`}
+                className={`w-full text-left px-4 py-2 rounded-lg font-medium transition ${activeTab === 'orders' ? 'bg-white text-[#5D2D2C]' : 'text-white hover:bg-white/20'}`}
               >
                 {t('orders_tab', 'Orders')}
               </button>
@@ -334,9 +325,7 @@ const AdminDashboard = () => {
                   setActiveTab('payments');
                   setMobileMenuOpen(false);
                 }}
-                className={`w-full text-left px-4 py-2 rounded-lg font-medium transition ${
-                  activeTab === 'payments' ? 'bg-white text-[#5D2D2C]' : 'text-white hover:bg-white/20'
-                }`}
+                className={`w-full text-left px-4 py-2 rounded-lg font-medium transition ${activeTab === 'payments' ? 'bg-white text-[#5D2D2C]' : 'text-white hover:bg-white/20'}`}
               >
                 {t('payments_tab', 'Payments')}
               </button>
@@ -345,9 +334,7 @@ const AdminDashboard = () => {
                   setActiveTab('users');
                   setMobileMenuOpen(false);
                 }}
-                className={`w-full text-left px-4 py-2 rounded-lg font-medium transition ${
-                  activeTab === 'users' ? 'bg-white text-[#5D2D2C]' : 'text-white hover:bg-white/20'
-                }`}
+                className={`w-full text-left px-4 py-2 rounded-lg font-medium transition ${activeTab === 'users' ? 'bg-white text-[#5D2D2C]' : 'text-white hover:bg-white/20'}`}
               >
                 {t('users_tab', 'Users')}
               </button>
@@ -363,12 +350,12 @@ const AdminDashboard = () => {
           <div>
             <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
               <h2 className="text-2xl sm:text-3xl font-bold text-gray-800">{t('manage_products_title', 'Manage Products')}</h2>
-              <div className="flex flex-col sm:flex-row gap-3">
+              <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
                 <button
                   onClick={() => setShowCategoryModal(true)}
-                  className="px-4 sm:px-6 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition flex items-center justify-center gap-2"
+                  className="w-full sm:w-auto px-4 sm:px-6 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition flex items-center justify-center gap-2"
                 >
-                  <Plus size={20} />
+                  <Plus size={18} />
                   <span className="text-sm sm:text-base">{t('add_category_button', 'Add Category')}</span>
                 </button>
                 <button
@@ -377,10 +364,10 @@ const AdminDashboard = () => {
                     setEditingProduct(null);
                     setShowProductModal(true);
                   }}
-                  className="px-4 sm:px-6 py-3 text-white rounded-lg hover:opacity-90 transition flex items-center justify-center gap-2"
+                  className="w-full sm:w-auto px-4 sm:px-6 py-3 text-white rounded-lg hover:opacity-90 transition flex items-center justify-center gap-2"
                   style={{ background: '#5D2D2C' }}
                 >
-                  <Plus size={20} />
+                  <Plus size={18} />
                   <span className="text-sm sm:text-base">{t('add_product_button', 'Add Product')}</span>
                 </button>
               </div>
@@ -400,8 +387,8 @@ const AdminDashboard = () => {
               </div>
             </div>
 
-            {/* Products Table */}
-            <div className="bg-white rounded-lg shadow overflow-x-auto">
+            {/* Desktop Table (hidden on small screens) */}
+            <div className="hidden sm:block bg-white rounded-lg shadow overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
@@ -433,9 +420,7 @@ const AdminDashboard = () => {
                         {product.variants[0]?.stock || 0}
                       </td>
                       <td className="hidden sm:table-cell px-6 py-4 whitespace-nowrap">
-                        <span className={`px-2 py-1 text-xs rounded-full ${
-                          product.isPublished ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                        }`}>
+                        <span className={`px-2 py-1 text-xs rounded-full ${product.isPublished ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
                           {product.isPublished ? t('status_published', 'Published') : t('status_draft', 'Draft')}
                         </span>
                       </td>
@@ -461,6 +446,55 @@ const AdminDashboard = () => {
                   ))}
                 </tbody>
               </table>
+            </div>
+
+            {/* Mobile Cards (visible on small screens) */}
+            <div className="sm:hidden space-y-3">
+              {filteredProducts.map((product) => (
+                <div key={product.productId} className="bg-white rounded-lg p-3 shadow-sm">
+                  <div className="flex items-start gap-3">
+                    <div className="w-16 h-16 bg-gray-100 rounded-md flex items-center justify-center text-gray-400">
+                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293" />
+                      </svg>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex justify-between items-start">
+                        <h3 className="text-sm font-semibold text-gray-900 truncate">{product.name}</h3>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => handleEditProduct(product)}
+                            className="p-1 text-blue-600 hover:text-blue-900"
+                            aria-label={t('edit_product_modal_title', 'Edit Product')}
+                          >
+                            <Edit2 size={16} />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteProduct(product.productId!)}
+                            className="p-1 text-red-600 hover:text-red-900"
+                            aria-label={t('confirm_delete_product', 'Delete product')}
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      </div>
+
+                      <p className="text-xs text-gray-500 truncate mt-1">{product.description}</p>
+
+                      <div className="mt-3 flex items-center justify-between">
+                        <div className="text-sm text-gray-700">
+                          {product.variants[0]?.priceAmount || 0} {product.variants[0]?.priceCurrency || 'EGP'}
+                        </div>
+                        <div className="text-xs">
+                          <span className={`px-2 py-1 text-xs rounded-full ${product.isPublished ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                            {product.isPublished ? t('status_published', 'Published') : t('status_draft', 'Draft')}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         )}
@@ -498,9 +532,7 @@ const AdminDashboard = () => {
                         {order.total} EGP
                       </td>
                       <td className="hidden md:table-cell px-6 py-4 whitespace-nowrap">
-                        <span className={`px-2 py-1 text-xs rounded-full ${
-                          order.status === 'Completed' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
-                        }`}>
+                        <span className={`px-2 py-1 text-xs rounded-full ${order.status === 'Completed' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
                           {t(order.status.toLowerCase(), order.status)}
                         </span>
                       </td>
@@ -564,9 +596,7 @@ const AdminDashboard = () => {
                         {payment.method}
                       </td>
                       <td className="hidden lg:table-cell px-6 py-4 whitespace-nowrap">
-                        <span className={`px-2 py-1 text-xs rounded-full ${
-                          payment.status === 'Completed' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
-                        }`}>
+                        <span className={`px-2 py-1 text-xs rounded-full ${payment.status === 'Completed' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
                           {t(payment.status.toLowerCase(), payment.status)}
                         </span>
                       </td>
@@ -657,9 +687,7 @@ const AdminDashboard = () => {
                     type="text"
                     value={newProduct.name}
                     onChange={(e) => setNewProduct({ ...newProduct, name: e.target.value })}
-                    className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-[#5D2D2C] ${
-                      formErrors.name ? 'border-red-500' : 'border-gray-300'
-                    }`}
+                    className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-[#5D2D2C] ${formErrors.name ? 'border-red-500' : 'border-gray-300'}`}
                   />
                   {formErrors.name && <p className="text-red-500 text-xs mt-1">{formErrors.name}</p>}
                 </div>
@@ -670,9 +698,7 @@ const AdminDashboard = () => {
                     type="text"
                     value={newProduct.slug}
                     onChange={(e) => setNewProduct({ ...newProduct, slug: e.target.value })}
-                    className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-[#5D2D2C] ${
-                      formErrors.slug ? 'border-red-500' : 'border-gray-300'
-                    }`}
+                    className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-[#5D2D2C] ${formErrors.slug ? 'border-red-500' : 'border-gray-300'}`}
                   />
                   {formErrors.slug && <p className="text-red-500 text-xs mt-1">{formErrors.slug}</p>}
                 </div>
@@ -683,9 +709,7 @@ const AdminDashboard = () => {
                     value={newProduct.description}
                     onChange={(e) => setNewProduct({ ...newProduct, description: e.target.value })}
                     rows={3}
-                    className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-[#5D2D2C] ${
-                      formErrors.description ? 'border-red-500' : 'border-gray-300'
-                    }`}
+                    className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-[#5D2D2C] ${formErrors.description ? 'border-red-500' : 'border-gray-300'}`}
                   />
                   {formErrors.description && <p className="text-red-500 text-xs mt-1">{formErrors.description}</p>}
                 </div>
@@ -695,9 +719,7 @@ const AdminDashboard = () => {
                   <select
                     value={newProduct.categoryId}
                     onChange={(e) => setNewProduct({ ...newProduct, categoryId: e.target.value })}
-                    className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-[#5D2D2C] ${
-                      formErrors.categoryId ? 'border-red-500' : 'border-gray-300'
-                    }`}
+                    className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-[#5D2D2C] ${formErrors.categoryId ? 'border-red-500' : 'border-gray-300'}`}
                   >
                     <option value="">{t('select_category_placeholder', 'Select a category')}</option>
                     {categories.map((cat) => (
@@ -749,9 +771,7 @@ const AdminDashboard = () => {
                             type="text"
                             value={variant.sku}
                             onChange={(e) => updateVariant(index, 'sku', e.target.value)}
-                            className={`w-full px-3 py-2 text-sm border rounded focus:ring-1 focus:ring-[#5D2D2C] ${
-                              formErrors[`variant_${index}_sku`] ? 'border-red-500' : 'border-gray-300'
-                            }`}
+                            className={`w-full px-3 py-2 text-sm border rounded focus:ring-1 focus:ring-[#5D2D2C] ${formErrors[`variant_${index}_sku`] ? 'border-red-500' : 'border-gray-300'}`}
                           />
                           {formErrors[`variant_${index}_sku`] && (
                             <p className="text-red-500 text-xs mt-1">{formErrors[`variant_${index}_sku`]}</p>
@@ -763,9 +783,7 @@ const AdminDashboard = () => {
                             type="number"
                             value={variant.priceAmount}
                             onChange={(e) => updateVariant(index, 'priceAmount', Number(e.target.value))}
-                            className={`w-full px-3 py-2 text-sm border rounded focus:ring-1 focus:ring-[#5D2D2C] ${
-                              formErrors[`variant_${index}_price`] ? 'border-red-500' : 'border-gray-300'
-                            }`}
+                            className={`w-full px-3 py-2 text-sm border rounded focus:ring-1 focus:ring-[#5D2D2C] ${formErrors[`variant_${index}_price`] ? 'border-red-500' : 'border-gray-300'}`}
                           />
                           {formErrors[`variant_${index}_price`] && (
                             <p className="text-red-500 text-xs mt-1">{formErrors[`variant_${index}_price`]}</p>
@@ -786,9 +804,7 @@ const AdminDashboard = () => {
                             type="number"
                             value={variant.stock}
                             onChange={(e) => updateVariant(index, 'stock', Number(e.target.value))}
-                            className={`w-full px-3 py-2 text-sm border rounded focus:ring-1 focus:ring-[#5D2D2C] ${
-                              formErrors[`variant_${index}_stock`] ? 'border-red-500' : 'border-gray-300'
-                            }`}
+                            className={`w-full px-3 py-2 text-sm border rounded focus:ring-1 focus:ring-[#5D2D2C] ${formErrors[`variant_${index}_stock`] ? 'border-red-500' : 'border-gray-300'}`}
                           />
                           {formErrors[`variant_${index}_stock`] && (
                             <p className="text-red-500 text-xs mt-1">{formErrors[`variant_${index}_stock`]}</p>

@@ -6,6 +6,9 @@ import { useProducts } from '../../Products/hooks/useProducts';
 import { useProductsAdmin } from '../../Products/hooks/useProductsAdmin';
 import { useCategories } from '../../Categories/hooks/useCategories';
 
+import { centerCropAndResizeFile } from '../../Users/utils/imageProcessing';
+import { resolveImageUrl } from '../../Users/utils/images';
+
 interface ProductVariant {
   productVariantId?: string;
   sku: string;
@@ -61,7 +64,7 @@ const ProductsManagement: React.FC = () => {
     description: '',
     categoryId: '',
     isPublished: true,
-    variants: [{ sku: '', priceAmount: 0, priceCurrency: 'EGP', stock: 0, isActive: true }],
+    variants: [{ sku: '', priceAmount: 0, priceCurrency: 'ريال', stock: 0, isActive: true }],
     media: [],
   });
 
@@ -120,7 +123,7 @@ const ProductsManagement: React.FC = () => {
       description: '',
       categoryId: '',
       isPublished: true,
-      variants: [{ sku: '', priceAmount: 0, priceCurrency: 'EGP', stock: 0, isActive: true }],
+      variants: [{ sku: '', priceAmount: 0, priceCurrency: 'ريال', stock: 0, isActive: true }],
       media: [],
     });
     setFormErrors({});
@@ -156,7 +159,7 @@ const ProductsManagement: React.FC = () => {
         variants: newProduct.variants.map(v => ({
           sku: v.sku,
           priceAmount: v.priceAmount,
-          priceCurrency: v.priceCurrency || 'EGP',
+          priceCurrency: v.priceCurrency || 'ريال',
           stock: v.stock,
           isActive: v.isActive,
         })),
@@ -201,7 +204,8 @@ const ProductsManagement: React.FC = () => {
 
     } catch (err) {
       console.error('Failed to add product:', err);
-      alert(t('error_add_product', 'Failed to add product. Please check all fields.'));
+      await fetchProducts();
+      resetProductForm();
     }
   };
 
@@ -262,8 +266,9 @@ const ProductsManagement: React.FC = () => {
 
     } catch (err) {
       console.error('Failed to update product:', err);
-      alert(t('error_update_product', 'Failed to update product.'));
-    }
+      await fetchProducts();
+        resetProductForm();
+          }
   };
 
   const handleDeleteProduct = async (id: string) => {
@@ -291,58 +296,90 @@ const ProductsManagement: React.FC = () => {
     setNewCategory({ name: '' });
   };
 
-  const handleEditProduct = (product: Product) => {
-    setEditingProduct(product);
-    setNewProduct({
-      ...product,
-      variants: product.variants.map(v => ({
-        productVariantId: v.productVariantId,
-        sku: v.sku,
-        priceAmount: v.priceAmount,
-        priceCurrency: v.priceCurrency,
-        stock: v.stock,
-        isActive: v.isActive,
-      })),
-      media: product.media.map(m => ({
-        mediaId: m.mediaId,
-        url: m.url,
-        fileName: m.fileName,
-        contentType: m.contentType,
-        sizeInBytes: m.sizeInBytes,
-        isPrimary: m.isPrimary,
-      })),
-    });
-    setMediaFiles({});
-    setShowProductModal(true);
-  };
+ const handleEditProduct = (product: Product) => {
+  setEditingProduct(product);
+
+  const mappedMedia: ProductMedia[] = (product.media || []).map((m) => {
+    const mid = (m as any).mediaId ?? (m as any).id ?? (m as any).Id ?? makeTempId();
+    const rawUrl = (m as any).url ?? (m as any).Url ?? '';
+    const url = resolveImageUrl(rawUrl);
+
+    return {
+      mediaId: mid,
+      url,
+      fileName: (m as any).fileName ?? '',
+      contentType: (m as any).contentType ?? '',
+      sizeInBytes: (m as any).sizeInBytes ?? 0,
+      isPrimary: Boolean((m as any).isPrimary),
+    } as ProductMedia;
+  });
+
+  setNewProduct({
+    ...product,
+    variants: product.variants.map(v => ({
+      productVariantId: v.productVariantId,
+      sku: v.sku,
+      priceAmount: v.priceAmount,
+      priceCurrency: v.priceCurrency,
+      stock: v.stock,
+      isActive: v.isActive,
+    })),
+    media: mappedMedia,
+  });
+
+  setMediaFiles({});
+  setShowProductModal(true);
+};
+
 
   // Media helpers
   const makeTempId = () => `tmp_${Date.now()}_${Math.floor(Math.random() * 10000)}`;
 
-  const handleFilesSelected = (filesList: FileList | null) => {
-    if (!filesList) return;
-    const filesArray = Array.from(filesList).filter((f) => f.type.startsWith('image/'));
-    if (filesArray.length === 0) return;
+const handleFilesSelected = async (filesList: FileList | null) => {
+  console.log('=== START handleFilesSelected ===');
+  console.log('Files:', filesList);
+  
+  if (!filesList) return;
+  
+  const filesArray = Array.from(filesList).filter(f => f.type.startsWith('image/'));
+  console.log('Image files count:', filesArray.length);
+  
+  if (filesArray.length === 0) return;
 
-    const newMedia = [...newProduct.media];
-    const newFiles = { ...mediaFiles };
+  const newMedia = [...newProduct.media];
+  const newFiles = { ...mediaFiles };
 
-    filesArray.forEach((file) => {
-      const id = makeTempId();
-      newFiles[id] = file;
-      newMedia.push({
-        mediaId: id,
-        url: URL.createObjectURL(file),
-        fileName: file.name,
-        contentType: file.type,
-        sizeInBytes: file.size,
-        isPrimary: newMedia.length === 0 && newProduct.media.length === 0,
-      });
+  for (const file of filesArray) {
+    console.log('Processing file:', file.name, file.type, file.size);
+    
+    const id = makeTempId();
+    
+    const previewUrl = URL.createObjectURL(file);
+    console.log('Created preview URL:', previewUrl);
+    
+    newFiles[id] = file;
+    
+    newMedia.push({
+      mediaId: id,
+      url: previewUrl,
+      fileName: file.name,
+      contentType: file.type,
+      sizeInBytes: file.size,
+      isPrimary: newMedia.length === 0,
     });
+    
+    console.log('Added media:', newMedia[newMedia.length - 1]);
+  }
 
-    setMediaFiles(newFiles);
-    setNewProduct({ ...newProduct, media: newMedia });
-  };
+  console.log('Final newMedia:', newMedia);
+  console.log('Final newFiles:', newFiles);
+  
+  setMediaFiles(newFiles);
+  setNewProduct({ ...newProduct, media: newMedia });
+  
+  console.log('=== END handleFilesSelected ===');
+};
+
 
   const removeMedia = (mediaId: string) => {
     const m = newProduct.media.find((x) => x.mediaId === mediaId);
@@ -381,29 +418,34 @@ const ProductsManagement: React.FC = () => {
   };
 
   const prepareMediaAndUpload = async (productId: string): Promise<ProductMedia[]> => {
-    const uploadedMedia: ProductMedia[] = [];
+  const uploadedMedia: ProductMedia[] = [];
 
-    for (const tmpId of Object.keys(mediaFiles)) {
-      const file = mediaFiles[tmpId];
-      try {
-        const uploaded = await uploadFileToServer(file, productId);
-        uploadedMedia.push({
-          mediaId: uploaded.mediaId,
-          url: uploaded.url,
-          fileName: uploaded.fileName || file.name,
-          contentType: uploaded.contentType || file.type,
-          sizeInBytes: uploaded.sizeInBytes || file.size,
-          isPrimary: newProduct.media.find((m) => m.mediaId === tmpId)?.isPrimary ?? false,
-        });
-      } catch (err) {
-        console.error('upload failed for', file.name, err);
-        throw err;
-      }
+  for (const tmpId of Object.keys(mediaFiles)) {
+    const file = mediaFiles[tmpId];
+
+    try {
+      // Process image: center-crop square + resize to 800x800 (تعديل الحجم لو حبيت)
+      const processedFile = await centerCropAndResizeFile(file, 800);
+
+      // Upload the processed file (uploadFileToServer expects File)
+      const uploaded = await uploadFileToServer(processedFile, productId);
+
+      uploadedMedia.push({
+        mediaId: uploaded.mediaId,
+        url: uploaded.url,
+        fileName: uploaded.fileName || processedFile.name,
+        contentType: uploaded.contentType || processedFile.type,
+        sizeInBytes: uploaded.sizeInBytes || processedFile.size,
+        isPrimary: newProduct.media.find((m) => m.mediaId === tmpId)?.isPrimary ?? false,
+      });
+    } catch (err) {
+      console.error('upload failed for', file.name, err);
+      throw err;
     }
+  }
 
-    return uploadedMedia;
-  };
-
+  return uploadedMedia;
+};
   // Variants
   const addVariant = () =>
     setNewProduct({
@@ -506,7 +548,8 @@ const ProductsManagement: React.FC = () => {
         </div>
       </div>
 
-      <div className="bg-white rounded-lg shadow overflow-x-auto">
+      {/* Desktop / Tablet Table (kept as original) */}
+      <div className="hidden sm:block bg-white rounded-lg shadow overflow-x-auto">
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>
@@ -522,7 +565,8 @@ const ProductsManagement: React.FC = () => {
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
             {paginatedProducts.map((product) => {
-              const primaryImage = product.media?.find((m) => m.isPrimary)?.url || product.media?.[0]?.url || 'https://dummyimage.com/80x80/ddd/999.png';
+              const primaryImageRaw = product.media?.find((m) => m.isPrimary)?.url || product.media?.[0]?.url || '';
+              const primaryImage = resolveImageUrl(primaryImageRaw) || 'https://dummyimage.com/80x80/ddd/999.png';
               return (
                 <tr key={product.productId} className="hover:bg-gray-50">
                   <td className="px-3 sm:px-6 py-4 text-sm text-gray-900">
@@ -546,9 +590,7 @@ const ProductsManagement: React.FC = () => {
                     {product.variants[0]?.stock || 0}
                   </td>
                   <td className="hidden sm:table-cell px-6 py-4 whitespace-nowrap">
-                    <span className={`px-2 py-1 text-xs rounded-full ${
-                      product.isPublished ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                    }`}>
+                    <span className={`px-2 py-1 text-xs rounded-full ${product.isPublished ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
                       {product.isPublished ? t('status_published', 'Published') : t('status_draft', 'Draft')}
                     </span>
                   </td>
@@ -581,6 +623,64 @@ const ProductsManagement: React.FC = () => {
             )}
           </tbody>
         </table>
+      </div>
+
+      {/* Mobile Card List (visible on small screens) - keeps same data & actions */}
+      <div className="sm:hidden space-y-3">
+        {paginatedProducts.map((product) => {
+          const primaryImageRaw = product.media?.find((m) => m.isPrimary)?.url || product.media?.[0]?.url || '';
+          const primaryImage = resolveImageUrl(primaryImageRaw) || 'https://dummyimage.com/160x160/ddd/999.png';
+          return (
+            <div key={product.productId} className="bg-white rounded-lg p-3 shadow-sm">
+              <div className="flex items-start gap-3">
+                <div className="w-20 h-20 rounded overflow-hidden bg-gray-100 flex items-center justify-center flex-shrink-0">
+                  <img src={primaryImage} alt={product.name || 'product image'} className="w-full h-full object-cover" />
+                </div>
+
+                <div className="flex-1 min-w-0">
+                  <div className="flex justify-between items-start">
+                    <h3 className="text-sm font-semibold text-gray-900 truncate">{product.name}</h3>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => handleEditProduct(product)}
+                        className="p-1 text-blue-600 hover:text-blue-900"
+                        aria-label={t('edit_product', 'Edit Product')}
+                      >
+                        <Edit2 size={16} />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteProduct(product.productId!)}
+                        className="p-1 text-red-600 hover:text-red-900"
+                        aria-label={t('delete_product', 'Delete product')}
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  </div>
+
+                  <p className="text-xs text-gray-500 truncate mt-1">{product.description}</p>
+
+                  <div className="mt-3 flex items-center justify-between">
+                    <div className="text-sm text-gray-700">
+                      {product.variants[0]?.priceAmount || 0} {product.variants[0]?.priceCurrency || 'EGP'}
+                    </div>
+                    <div className="text-xs">
+                      <span className={`px-2 py-1 text-xs rounded-full ${product.isPublished ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                        {product.isPublished ? t('status_published', 'Published') : t('status_draft', 'Draft')}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+
+        {paginatedProducts.length === 0 && (
+          <div className="text-center py-8 text-sm text-gray-500">
+            {t('no_products_found', 'No products found.')}
+          </div>
+        )}
       </div>
 
       {/* Pagination Controls */}
@@ -849,7 +949,20 @@ const ProductsManagement: React.FC = () => {
                           alt={m.fileName}
                           className="w-full h-full object-cover cursor-pointer"
                           onClick={() => m.mediaId && setPrimaryMedia(m.mediaId)}
+                          onError={(e) => {
+                            console.error('❌ Image failed to load:', m.url);
+                            const target = e.target as HTMLImageElement;
+                            console.error('❌ Image naturalWidth:', target.naturalWidth);
+                            console.error('❌ Image naturalHeight:', target.naturalHeight);
+                          }}
+                          onLoad={(e) => {
+                            const target = e.target as HTMLImageElement;
+                            console.log('✅ Image loaded:', m.url);
+                            console.log('✅ naturalWidth:', target.naturalWidth);
+                            console.log('✅ naturalHeight:', target.naturalHeight);
+                          }}
                         />
+
                         <button
                           onClick={() => m.mediaId && removeMedia(m.mediaId)}
                           className="absolute top-1 right-1 bg-white rounded-full p-1 shadow"

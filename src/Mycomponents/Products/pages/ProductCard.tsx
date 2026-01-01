@@ -6,6 +6,7 @@ import type { Product } from '../../../types/product.types';
 
 import { useAddToCart } from '../../Carts/hooks/useAddToCart';
 import authService from '../../Users/Services/authService';
+import { resolveImageUrl } from '../../Users/utils/images'; 
 
 interface ProductCardProps {
   product: Product;
@@ -164,11 +165,11 @@ const handleAddToCart = async (e: React.MouseEvent) => {
         <Link to={`/product/${encodeURIComponent(String(linkId))}`} className="block" aria-hidden>
           <div className="relative h-40 sm:h-48 md:h-52 lg:h-56 xl:h-64 bg-gray-50 overflow-hidden">
             {displayImage ? (
-              <img
-                src={displayImage.url}
-                alt={product.name}
-                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-              />
+           <img
+  src={resolveImageUrl(displayImage.url)}
+  alt={product.name}
+  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+/>
             ) : (
               <div className="w-full h-full flex items-center justify-center text-gray-300">
                 <span className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl">🧴</span>

@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import type { ReactNode } from 'react';
 import { Trash2, Heart, Plus, Minus, CreditCard, User, Mail, Phone, Home } from 'lucide-react';
@@ -54,6 +55,7 @@ interface CartContextType {
   setShippingInfo: (info: ShippingInfo) => void;
   loading: boolean;
   error: string | null;
+  refreshCart: () => Promise<void>;
 }
 
 // ---------------------- Context ----------------------
@@ -69,17 +71,14 @@ const useCart = () => {
 
 // ---------------------- Provider ----------------------
 const CartProvider: React.FC<{ children: ReactNode; userId?: string | undefined }> = ({ children, userId }) => {
-  const { cart, loading, error } = useCartByUser(userId ?? '');
-  // console.log('useCartByUser:', { cart, loading, error });
+  const { cart, loading, error, fetchCart } = useCartByUser(userId ?? '');
 
-  // derive cartId directly from cart (no need to store it in state)
   const cartId = cart?.id ? String(cart.id) : null;
 
   const [products, setProducts] = useState<Product[]>([]);
   const [shippingInfo, setShippingInfo] = useState<ShippingInfo | null>(null);
 
   useEffect(() => {
-    // Type assertion to handle the items property
     const cartWithItems = cart as CartWithItems | null;
     
     if (!cartWithItems?.items || cartWithItems.items.length === 0) {
@@ -98,7 +97,6 @@ const CartProvider: React.FC<{ children: ReactNode; userId?: string | undefined 
       image: undefined,
     }));
 
-    // Simple shallow compare based on length + ids/price/quantity to avoid needless setState
     setProducts((prev) => {
       if (
         prev.length === mapped.length &&
@@ -123,6 +121,10 @@ const CartProvider: React.FC<{ children: ReactNode; userId?: string | undefined 
     return products.reduce((sum, p) => sum + p.price * p.quantity, 0);
   };
 
+  const refreshCart = async () => {
+    await fetchCart();
+  };
+
   return (
     <CartContext.Provider
       value={{
@@ -135,6 +137,7 @@ const CartProvider: React.FC<{ children: ReactNode; userId?: string | undefined 
         setShippingInfo,
         loading,
         error,
+        refreshCart,
       }}
     >
       {children}
@@ -212,7 +215,7 @@ const isValidCVV = (cvv: string) => {
 // =================== ProductCard ===================
 const ProductCard: React.FC<{ product: Product }> = ({ product }) => {
   const { t } = useTranslation();
-  const { updateQuantity, cartId } = useCart();
+  const { updateQuantity, cartId, refreshCart } = useCart();
   const { removeItem, loading: removing, error: removeError } = useRemoveCartItem();
 
   const handleRemove = async () => {
@@ -223,10 +226,11 @@ const ProductCard: React.FC<{ product: Product }> = ({ product }) => {
 
     try {
       const result = await removeItem(cartId, product.id);
-      window.location.reload();
+        await refreshCart();
 
       if (result) {
-        window.location.reload();
+        await refreshCart();
+        console.log('Cart refreshed after removing item');
       } else {
         console.error('Failed to remove item from cart');
       }
@@ -254,17 +258,21 @@ const ProductCard: React.FC<{ product: Product }> = ({ product }) => {
           <div className="flex items-center gap-2 bg-white rounded-lg border border-gray-200">
             <button
               onClick={handleRemove}
-              className="p-2 hover:bg-gray-100 transition-colors"
+              className="p-2 hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               aria-label={t('remove_item', 'Remove {{name}}', { name: product.name })}
               disabled={removing}
             >
-              <Trash2 className="w-4 h-4" />
+              {removing ? (
+                <div className="w-4 h-4 border-2 border-gray-300 border-t-red-600 rounded-full animate-spin" />
+              ) : (
+                <Trash2 className="w-4 h-4" />
+              )}
             </button>
 
             <button
               onClick={() => updateQuantity(product.id, product.quantity - 1)}
               className="p-2 hover:bg-gray-100 transition-colors disabled:opacity-50"
-              disabled={product.quantity <= 1}
+              disabled={product.quantity <= 1 || removing}
               aria-label={t('decrease_quantity', 'Decrease quantity for {{name}}', { name: product.name })}
             >
               <Minus className="w-4 h-4" />
@@ -274,8 +282,9 @@ const ProductCard: React.FC<{ product: Product }> = ({ product }) => {
 
             <button
               onClick={() => updateQuantity(product.id, product.quantity + 1)}
-              className="p-2 hover:bg-gray-100 transition-colors"
+              className="p-2 hover:bg-gray-100 transition-colors disabled:opacity-50"
               aria-label={t('increase_quantity', 'Increase quantity for {{name}}', { name: product.name })}
+              disabled={removing}
             >
               <Plus className="w-4 h-4" />
             </button>

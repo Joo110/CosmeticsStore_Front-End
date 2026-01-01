@@ -7,6 +7,7 @@ import { useAddToCart } from '../../Carts/hooks/useAddToCart';
 import authService from '../../Users/Services/authService';
 import type { ProductsQuery } from '../../../types/product.types';
 import type { Product as ProductType } from '../../../types/product.types';
+import { resolveImageUrl } from '../../Users/utils/images';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -27,6 +28,7 @@ type DerivedItem = {
   discountPercentage: number;
   rating: number;
   media: any[];
+  createdAtUtc: Date | null;
 };
 
 interface ProductGridProps {
@@ -94,6 +96,7 @@ const ProductGrid: React.FC<ProductGridProps> = ({
     t('on_sale', 'On Sale')
   ];
 
+  // Derived products
   const derivedProducts: DerivedItem[] = useMemo(() => {
     const list = (productsSource || []) as ProductType[];
     return list.map((product: ProductType) => {
@@ -112,7 +115,7 @@ const ProductGrid: React.FC<ProductGridProps> = ({
       if (priceAmount && priceAmount > 0) {
         const minExtra = 0.15;
         const maxExtra = 0.4;
-        const seed = hashStringToNumber(String(product.productId ?? product.slug ?? '0'));
+        const seed = hashStringToNumber(String((product as any).productId ?? (product as any).slug ?? '0'));
         const rnd01 = (seed % 1000) / 1000;
         const factor = 1 + minExtra + rnd01 * (maxExtra - minExtra);
         fakeOriginalPrice = Math.ceil(priceAmount * factor);
@@ -122,7 +125,7 @@ const ProductGrid: React.FC<ProductGridProps> = ({
         ? Math.round(((fakeOriginalPrice - priceAmount) / fakeOriginalPrice) * 100)
         : 0;
 
-      const ratingSeed = hashStringToNumber(String(product.productId ?? product.slug ?? '0')) % 2;
+      const ratingSeed = hashStringToNumber(String((product as any).productId ?? (product as any).slug ?? '0')) % 2;
       const rating = 4 + ratingSeed;
 
       let formattedPrice = '';
@@ -148,6 +151,10 @@ const ProductGrid: React.FC<ProductGridProps> = ({
         formattedOriginal = fakeOriginalPrice > 0 ? `${fakeOriginalPrice.toLocaleString()} ${priceCurrency}` : '';
       }
 
+      // createdAt extraction for sorting "New Arrival"
+      const createdAtRaw = (product as any).createdAtUtc ?? (product as any).createdAt ?? (product as any).CreatedAtUtc ?? null;
+      const createdAtUtc = createdAtRaw ? new Date(createdAtRaw) : null;
+
       return {
         product,
         activeVariant,
@@ -161,17 +168,60 @@ const ProductGrid: React.FC<ProductGridProps> = ({
         discountPercentage,
         rating,
         media,
+        createdAtUtc
       };
     });
-  }, [productsSource]);
+  }, [productsSource, t]);
 
-  const totalPages = Math.max(1, Math.ceil(derivedProducts.length / itemsPerPage));
+  // Apply filter / sort professionally based on selectedFilter
+  const SHOW = filterOptions[0];
+  const NEW = filterOptions[1];
+  const BEST = filterOptions[2];
+  const SALE = filterOptions[3];
+
+  const filteredProducts = useMemo(() => {
+    const arr = [...derivedProducts];
+
+    switch (selectedFilter) {
+      case NEW:
+        // Sort by createdAt descending (most recent first). If createdAt missing, keep them at the end.
+        arr.sort((a, b) => {
+          const at = a.createdAtUtc ? a.createdAtUtc.getTime() : 0;
+          const bt = b.createdAtUtc ? b.createdAtUtc.getTime() : 0;
+          return bt - at;
+        });
+        break;
+
+      case BEST:
+        // Sort by rating descending
+        arr.sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0));
+        break;
+
+      case SALE:
+        // Only items with discountPercentage > 0
+        return arr.filter(x => (x.discountPercentage ?? 0) > 0);
+
+      case SHOW:
+      default:
+        // no filter, original order (derivedProducts order)
+        break;
+    }
+
+    return arr;
+  }, [derivedProducts, selectedFilter, NEW, BEST, SALE, SHOW]);
+
+  // reset page when filter or data changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedFilter, derivedProducts.length]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredProducts.length / itemsPerPage));
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
-  const currentProducts = derivedProducts.slice(startIndex, endIndex);
+  const currentProducts = filteredProducts.slice(startIndex, endIndex);
 
   // useAddToCart hook for adding items
-  const { addItem, loading: addLoading,  } = useAddToCart();
+  const { addItem, loading: addLoading } = useAddToCart();
 
   // When ProductCardInline calls handleAddToCart(productId, variantId) this will run
   const handleAddToCart = async (productId: string, variantId: string) => {
@@ -279,7 +329,7 @@ const ProductGrid: React.FC<ProductGridProps> = ({
             <div className="relative h-40 sm:h-48 md:h-52 lg:h-56 xl:h-64 bg-gray-50 overflow-hidden">
               {primaryImage ? (
                 <img
-                  src={(primaryImage as any).url ?? (primaryImage as any).src ?? ''}
+                  src={resolveImageUrl((primaryImage as any).url ?? (primaryImage as any).src ?? '')} // ✅
                   alt={(product as any).name ?? (product as any).title ?? t('product', 'product')}
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                   loading="lazy"
@@ -309,11 +359,13 @@ const ProductGrid: React.FC<ProductGridProps> = ({
                       type="button"
                     >
                       <img
-                        src={m.url}
+                        src={resolveImageUrl(m.url)}
                         alt={`thumb-${idx}`}
                         className="w-full h-full object-cover"
                         loading="lazy"
-                        onError={(e: any) => { if (e?.target) (e.target.src = 'https://via.placeholder.com/80x80?text=No'); }}
+                        onError={(e: any) => {
+                          if (e?.target) e.target.src = 'https://via.placeholder.com/80x80?text=No';
+                        }}
                       />
                     </button>
                   ))}
@@ -445,7 +497,7 @@ const ProductGrid: React.FC<ProductGridProps> = ({
           </div>
 
           {/* Pagination */}
-          {derivedProducts.length > 0 && totalPages > 1 && (
+          {filteredProducts.length > 0 && totalPages > 1 && (
             <div className="flex justify-center items-center gap-1 sm:gap-1.5 mt-8 sm:mt-10 lg:mt-12">
               <button
                 onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
@@ -497,7 +549,7 @@ const ProductGrid: React.FC<ProductGridProps> = ({
           )}
 
           {/* Empty State */}
-          {derivedProducts.length === 0 && !loading && (
+          {filteredProducts.length === 0 && !loading && (
             <div className="text-center py-12 sm:py-16 lg:py-20">
               <div className="inline-flex items-center justify-center w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-gray-100 mb-4 sm:mb-6">
                 <svg className="w-8 h-8 sm:w-10 sm:h-10 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">

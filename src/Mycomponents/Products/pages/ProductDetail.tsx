@@ -1,8 +1,12 @@
 import { useState, useMemo, useEffect, type JSX, type KeyboardEvent } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { toast } from 'react-toastify';
 import { Heart, ShoppingCart, Star, Minus, Plus, Share2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useProduct, useProducts } from '../hooks/useProducts';
+import { resolveImageUrl } from '../../Users/utils/images';
+import { useAddToCart } from '../../Carts/hooks/useAddToCart';
+import authService from '../../Users/Services/authService';
 
 export default function ProductDetailPage(): JSX.Element {
   const { t } = useTranslation();
@@ -16,9 +20,11 @@ export default function ProductDetailPage(): JSX.Element {
     isPublished: true,
   });
 
+  // add-to-cart hook
+  const { addItem, loading: actionLoading} = useAddToCart();
+
   const [quantity, setQuantity] = useState(1);
   const [selectedImage, setSelectedImage] = useState(0);
-  const [isFavorite, setIsFavorite] = useState(false);
   const [activeTab, setActiveTab] = useState<'description' | 'specifications' | 'additional'>('description');
 
   const RECOMMENDED_COUNT = 8;
@@ -151,6 +157,7 @@ export default function ProductDetailPage(): JSX.Element {
   const firstVariant = variants[0] ?? undefined;
   const activeVariant = variants.find((v: any) => v?.isActive) ?? firstVariant;
   const hasStock = Boolean(activeVariant && Number(activeVariant.stock) > 0);
+  const availableStock = Number(activeVariant?.stock ?? 0);
 
   const priceAmount = Number(activeVariant?.priceAmount ?? firstVariant?.priceAmount ?? (product as any)?.price ?? 0);
   const originalPrice = Number(activeVariant?.originalPrice ?? firstVariant?.listPrice ?? (product as any)?.originalPrice ?? 0);
@@ -173,6 +180,58 @@ export default function ProductDetailPage(): JSX.Element {
       return `${originalPrice.toLocaleString()} ${priceCurrency}`;
     }
   }, [originalPrice, priceCurrency]);
+
+  // --- Add to cart handler for ProductDetailPage ---
+  const handleAddToCart = async (e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+
+    if (!activeVariant) {
+      toast.error(t('no_variant_available', 'No active variant available'));
+      return;
+    }
+
+    const variantId = String(activeVariant.productVariantId ?? activeVariant.id ?? '');
+    if (!variantId) {
+      toast.error(t('unable_add_cart', 'Unable to add to cart: invalid variant id'));
+      return;
+    }
+
+    if (availableStock > 0 && quantity > availableStock) {
+      toast.error(t('limited_stock', 'Only {{count}} item(s) left in stock', { count: availableStock }));
+      return;
+    }
+
+    const currentUser = authService.getCurrentUser();
+    if (!currentUser) {
+      toast.info(t('login_to_add_cart', 'Please login to add items to cart'));
+      return;
+    }
+
+    const cartItemRequest = {
+      userId: currentUser.userId,
+      productVariantId: variantId,
+      quantity,
+    };
+
+    try {
+      const res = await addItem(cartItemRequest);
+      if (res) {
+        toast.success(t('added_to_cart_success', '✅ Added {{count}} item(s) to cart successfully!', { count: quantity }));
+      } else {
+        toast.error(t('failed_add_cart', 'Failed to add to cart'));
+      }
+    } catch (err: any) {
+      if (err?.response?.status === 401) {
+        toast.warning(t('session_expired', 'Session expired. Please login again.'));
+      } else {
+        toast.error(t('unexpected_error', 'An unexpected error occurred'));
+      }
+    }
+  };
+  // --- end add to cart handler ---
 
   // Loading / Error handling
   if (productLoading) {
@@ -235,15 +294,15 @@ export default function ProductDetailPage(): JSX.Element {
           <div className="space-y-4">
             {/* Main Image */}
             <div className="relative bg-white rounded-2xl overflow-hidden shadow-lg aspect-square">
-              <img
-                src={displayedImages[selectedImage]}
-                alt={(product as any).name}
-                className="w-full h-full object-cover"
-                onError={(e: any) => {
-                  if (e?.target) e.target.src = PLACEHOLDER_IMAGE;
-                }}
-                loading="lazy"
-              />
+             <img
+  src={resolveImageUrl(displayedImages[selectedImage])}
+  alt={(product as any).name}
+  className="w-full h-full object-cover"
+  onError={(e: any) => {
+    if (e?.target) e.target.src = PLACEHOLDER_IMAGE;
+  }}
+  loading="lazy"
+/>
 
               {/* Navigation Arrows */}
               {displayedImages.length > 1 && (
@@ -298,13 +357,14 @@ export default function ProductDetailPage(): JSX.Element {
                       selectedImage === idx ? 'border-[#5D2D2C] shadow-md' : 'border-gray-200 hover:border-gray-300'
                     }`}
                   >
-                    <img
-                      src={img}
-                      alt={t('thumbnail', 'Thumbnail {{number}}', { number: idx + 1 })}
-                      className="w-full h-full object-cover"
-                      onError={(e: any) => { if (e?.target) e.target.src = PLACEHOLDER_IMAGE; }}
-                      loading="lazy"
-                    />
+                  <img
+  src={resolveImageUrl(img)} 
+  alt={t('thumbnail', 'Thumbnail {{number}}', { number: idx + 1 })}
+  className="w-full h-full object-cover"
+  onError={(e: any) => { if (e?.target) e.target.src = PLACEHOLDER_IMAGE; }}
+  loading="lazy"
+/>
+
                   </button>
                 ))}
               </div>
@@ -367,21 +427,27 @@ export default function ProductDetailPage(): JSX.Element {
             <div className="flex gap-3">
               <button
                 type="button"
+                onClick={handleAddToCart}
                 className="flex-1 bg-gradient-to-r from-[#5D2D2C] to-[#7a3a38] text-white py-4 rounded-xl font-bold text-lg hover:shadow-xl transition-all flex items-center justify-center gap-2"
                 aria-label={t('add_to_cart', 'Add to cart')}
+                disabled={actionLoading}
               >
-                <ShoppingCart className="w-5 h-5" />
-                {t('add_to_cart', 'Add to Cart')}
+                {actionLoading ? (
+                  <>
+                    <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <span>{t('adding', 'Adding...')}</span>
+                  </>
+                ) : (
+                  <>
+                    <ShoppingCart className="w-5 h-5" />
+                    {t('add_to_cart', 'Add to Cart')}
+                  </>
+                )}
               </button>
-              <button
-                type="button"
-                onClick={() => setIsFavorite(!isFavorite)}
-                className={`w-14 h-14 border-2 rounded-xl flex items-center justify-center transition-all ${isFavorite ? 'bg-red-50 border-red-500' : 'border-gray-300 hover:border-red-500'}`}
-                aria-pressed={isFavorite}
-                aria-label={isFavorite ? t('remove_favorite', 'Remove favorite') : t('add_favorite', 'Add favorite')}
-              >
-                <Heart className={`w-6 h-6 ${isFavorite ? 'fill-red-500 text-red-500' : 'text-gray-400'}`} />
-              </button>
+         
               <button type="button" className="w-14 h-14 border-2 border-gray-300 rounded-xl flex items-center justify-center hover:border-[#5D2D2C] transition-colors" aria-label={t('share_product', 'Share product')}>
                 <Share2 className="w-5 h-5 text-gray-600" />
               </button>
@@ -441,7 +507,13 @@ export default function ProductDetailPage(): JSX.Element {
               return (
                 <Link key={p.pid} to={`/product/${encodeURIComponent(p.pid)}`} className="bg-white rounded-xl shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden group" aria-label={t('view_product', 'View product {{name}}', { name: p.name })}>
                   <div className="relative aspect-square bg-gray-100">
-                    <img src={p.image} alt={p.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" onError={(e: any) => (e?.target ? (e.target.src = PLACEHOLDER_IMAGE) : null)} loading="lazy" />
+<img
+  src={resolveImageUrl(p.image)}
+  alt={p.name}
+  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+  onError={(e: any) => (e?.target ? (e.target.src = PLACEHOLDER_IMAGE) : null)}
+  loading="lazy"
+/>
                     {p.discountPercent > 0 && (
                       <div className="absolute top-2 left-2 bg-red-500 text-white px-2 py-1 rounded text-xs font-bold">-{p.discountPercent}%</div>
                     )}

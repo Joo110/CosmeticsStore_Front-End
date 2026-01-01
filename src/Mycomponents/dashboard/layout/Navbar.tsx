@@ -1,6 +1,6 @@
 // src/components/Navbar.tsx
-import { ShoppingBag } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { ShoppingBag, ChevronDown, Globe } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import Cookies from 'js-cookie';
@@ -9,7 +9,10 @@ export default function Navbar() {
   const { t, i18n } = useTranslation();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [isLanguageOpen, setIsLanguageOpen] = useState(false);
   const [cartCount] = useState(0);
+
+  const languageDropdownRef = useRef<HTMLDivElement>(null);
 
   // local state for search input
   const [searchInput, setSearchInput] = useState('');
@@ -31,9 +34,26 @@ export default function Navbar() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (languageDropdownRef.current && !languageDropdownRef.current.contains(event.target as Node)) {
+        setIsLanguageOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   const changeLanguage = (lang: 'ar' | 'en') => {
     i18n.changeLanguage(lang);
     Cookies.set('language', lang);
+    setIsLanguageOpen(false);
+  };
+
+  const getCurrentLanguageLabel = () => {
+    return i18n.language === 'ar' ? 'العربية' : 'English';
   };
 
   // navigate to products page with query param
@@ -76,20 +96,58 @@ export default function Navbar() {
             </span>
           </div>
           <div className="flex items-center gap-3">
-            <div className="text-white/90 text-sm">
+            {/* Language Dropdown - Desktop Top Bar */}
+            <div className="relative" ref={languageDropdownRef}>
               <button
-                onClick={() => changeLanguage('en')}
-                className={`px-2 py-1 rounded ${i18n.language === 'en' ? 'bg-white/20' : 'hover:bg-white/10'}`}
+                onClick={() => setIsLanguageOpen(!isLanguageOpen)}
+                className="flex items-center gap-2 px-3 py-1.5 text-white/90 hover:bg-white/10 rounded-lg transition-colors"
               >
-                EN
+                <Globe className="w-4 h-4" />
+                <span className="text-sm font-medium">{getCurrentLanguageLabel()}</span>
+                <ChevronDown className={`w-4 h-4 transition-transform ${isLanguageOpen ? 'rotate-180' : ''}`} />
               </button>
-              <button
-                onClick={() => changeLanguage('ar')}
-                className={`px-2 py-1 rounded ${i18n.language === 'ar' ? 'bg-white/20' : 'hover:bg-white/10'}`}
-              >
-                عربي
-              </button>
+
+              {isLanguageOpen && (
+                <div className="absolute top-full mt-2 right-0 bg-white rounded-lg shadow-xl border border-gray-200 py-2 min-w-[160px] animate-fadeIn z-50">
+                  <button
+                    onClick={() => changeLanguage('en')}
+                    className={`w-full px-4 py-2.5 text-left flex items-center gap-3 hover:bg-gray-50 transition-colors ${
+                      i18n.language === 'en' ? 'bg-[#5D2D2C]/5 text-[#5D2D2C]' : 'text-gray-700'
+                    }`}
+                  >
+                    <span className="text-xl">🇬🇧</span>
+                    <div>
+                      <div className="font-medium text-sm">English</div>
+                      <div className="text-xs text-gray-500">EN</div>
+                    </div>
+                    {i18n.language === 'en' && (
+                      <svg className="w-4 h-4 ml-auto text-[#5D2D2C]" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                      </svg>
+                    )}
+                  </button>
+
+                  <button
+                    onClick={() => changeLanguage('ar')}
+                    className={`w-full px-4 py-2.5 text-left flex items-center gap-3 hover:bg-gray-50 transition-colors ${
+                      i18n.language === 'ar' ? 'bg-[#5D2D2C]/5 text-[#5D2D2C]' : 'text-gray-700'
+                    }`}
+                  >
+                    <span className="text-xl">🇪🇬</span>
+                    <div>
+                      <div className="font-medium text-sm">العربية</div>
+                      <div className="text-xs text-gray-500">AR</div>
+                    </div>
+                    {i18n.language === 'ar' && (
+                      <svg className="w-4 h-4 ml-auto text-[#5D2D2C]" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                      </svg>
+                    )}
+                  </button>
+                </div>
+              )}
             </div>
+
             <Link to="/profile" className="text-white hover:text-white/80 transition-colors font-medium">
               {t('my_account', 'My Account')}
             </Link>
@@ -131,7 +189,7 @@ export default function Navbar() {
               </div>
               <div className="hidden sm:block text-left" style={{ textAlign: isRtl ? 'right' as const : 'left' as const }}>
                 <h1 className="text-xl lg:text-2xl font-bold bg-gradient-to-r from-[#5D2D2C] to-[#8B4545] bg-clip-text text-transparent">
-                  GlowStore
+                  بصمة
                 </h1>
                 <p className="text-xs text-gray-500 -mt-1">{t('tagline', 'Beauty & Cosmetics')}</p>
               </div>
@@ -189,73 +247,54 @@ export default function Navbar() {
           </div>
 
           {/* Right Icons */}
-          <div className="flex items-center" style={{ gap: isRtl ? undefined : '0.5rem' }}>
-            <div className="flex items-center space-x-2 sm:space-x-3">
-              {/* Mobile Search Button */}
-              <button
-                onClick={() => setIsSearchOpen(!isSearchOpen)}
-                className="md:hidden p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
-                aria-label={t('search', 'Search')}
-              >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                </svg>
-              </button>
+          <div className="flex items-center gap-2">
+            {/* Mobile Search Button */}
+            <button
+              onClick={() => setIsSearchOpen(!isSearchOpen)}
+              className="md:hidden p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+              aria-label={t('search', 'Search')}
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </button>
 
-              <Link
-                to="/orders"
-                className="hidden sm:block p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg relative transition-colors"
-                aria-label={t('my_orders', 'My Orders')}
-              >
-                <ShoppingBag className="w-6 h-6" />
-              </Link>
+            {/* Orders Icon - Visible on all screens */}
+            <Link
+              to="/orders"
+              className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg relative transition-colors"
+              aria-label={t('my_orders', 'My Orders')}
+            >
+              <ShoppingBag className="w-6 h-6" />
+            </Link>
 
-              {/* Cart */}
-              <Link
-                to="/shipping"
-                className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg relative transition-colors"
-                aria-label={t('shopping_cart', 'Shopping cart')}
-              >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"
-                  />
-                </svg>
-                {cartCount > 0 && (
-                  <span className={`absolute -top-1 ${isRtl ? '-left-1' : '-right-1'} bg-[#5D2D2C] text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-semibold shadow-md`}>
-                    {cartCount}
-                  </span>
-                )}
-              </Link>
+            {/* Cart */}
+            <Link
+              to="/shipping"
+              className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg relative transition-colors"
+              aria-label={t('shopping_cart', 'Shopping cart')}
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"
+                />
+              </svg>
+              {cartCount > 0 && (
+                <span className={`absolute -top-1 ${isRtl ? '-left-1' : '-right-1'} bg-[#5D2D2C] text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-semibold shadow-md`}>
+                  {cartCount}
+                </span>
+              )}
+            </Link>
 
-              {/* Language buttons for mobile (visible on small screens) */}
-              <div className="md:hidden flex items-center gap-1">
-                <button
-                  onClick={() => changeLanguage('en')}
-                  className={`px-2 py-1 rounded text-sm ${i18n.language === 'en' ? 'bg-gray-100 text-gray-900' : 'text-gray-600 hover:bg-gray-100'}`}
-                  aria-label="English"
-                >
-                  EN
-                </button>
-                <button
-                  onClick={() => changeLanguage('ar')}
-                  className={`px-2 py-1 rounded text-sm ${i18n.language === 'ar' ? 'bg-gray-100 text-gray-900' : 'text-gray-600 hover:bg-gray-100'}`}
-                  aria-label="Arabic"
-                >
-                  عربي
-                </button>
-              </div>
-
-              {/* User Account - Mobile */}
-              <Link to="/profile" className="md:hidden p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors" aria-label={t('my_account', 'My account')}>
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                </svg>
-              </Link>
-            </div>
+            {/* User Account - Mobile */}
+            <Link to="/profile" className="md:hidden p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors" aria-label={t('my_account', 'My account')}>
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+              </svg>
+            </Link>
           </div>
         </div>
 
@@ -295,7 +334,7 @@ export default function Navbar() {
             aria-hidden="true"
           ></div>
 
-          {/* Menu Content - enter from left for LTR, from right for RTL */}
+          {/* Menu Content */}
           <div
             className={`fixed top-0 ${isRtl ? 'right-0' : 'left-0'} bottom-0 w-80 max-w-[85vw] bg-white z-50 overflow-y-auto shadow-2xl 
               ${isRtl ? 'animate-slideInRight' : 'animate-slideInLeft'}`}
@@ -304,36 +343,15 @@ export default function Navbar() {
           >
             <div className="p-4 border-b border-gray-200 flex items-center justify-between bg-gradient-to-r from-[#5D2D2C] to-[#7a3f3e]">
               <h2 className="text-lg font-bold text-white">{t('menu', 'Menu')}</h2>
-              <div className="flex items-center gap-2">
-                {/* language toggles inside menu header (visible on mobile) */}
-                <div className="hidden sm:hidden flex items-center gap-1" />
-                <div className="flex items-center gap-1">
-                  <button
-                    onClick={() => changeLanguage('en')}
-                    className={`px-2 py-1 rounded text-sm ${i18n.language === 'en' ? 'bg-white/20 text-white' : 'text-white/80 hover:bg-white/10'}`}
-                    aria-label="English"
-                  >
-                    EN
-                  </button>
-                  <button
-                    onClick={() => changeLanguage('ar')}
-                    className={`px-2 py-1 rounded text-sm ${i18n.language === 'ar' ? 'bg-white/20 text-white' : 'text-white/80 hover:bg-white/10'}`}
-                    aria-label="Arabic"
-                  >
-                    عربي
-                  </button>
-                </div>
-
-                <button
-                  onClick={() => setIsMenuOpen(false)}
-                  className="p-2 text-white hover:bg-white/10 rounded-lg transition-colors"
-                  aria-label={t('close_menu', 'Close menu')}
-                >
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
+              <button
+                onClick={() => setIsMenuOpen(false)}
+                className="p-2 text-white hover:bg-white/10 rounded-lg transition-colors"
+                aria-label={t('close_menu', 'Close menu')}
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
             </div>
 
             <div className="p-4 space-y-1">
@@ -360,40 +378,122 @@ export default function Navbar() {
 
             {/* Mobile Menu Footer */}
             <div className="p-4 border-t border-gray-200 bg-gray-50">
-              <div className="space-y-2 text-sm text-gray-600">
-                <p className="flex items-center">
-                  <svg className={`w-4 h-4 ${isRtl ? 'ml-2' : 'mr-2'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-                  </svg>
-                  +20 123 456 789
-                </p>
-                <p className="flex items-center">
-                  <svg className={`w-4 h-4 ${isRtl ? 'ml-2' : 'mr-2'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                  </svg>
-                  support@cosmetics.com
-                </p>
-
-                {/* language (footer) */}
-                <div className="pt-2 flex items-center gap-2">
-                  <button
-                    onClick={() => changeLanguage('en')}
-                    className={`px-3 py-1 rounded text-sm border ${i18n.language === 'en' ? 'bg-white' : 'bg-transparent'}`}
-                  >
-                    EN
-                  </button>
-                  <button
-                    onClick={() => changeLanguage('ar')}
-                    className={`px-3 py-1 rounded text-sm border ${i18n.language === 'ar' ? 'bg-white' : 'bg-transparent'}`}
-                  >
-                    عربي
-                  </button>
+              <div className="space-y-3">
+                <div className="space-y-2 text-sm text-gray-600">
+                  <p className="flex items-center">
+                    <svg className={`w-4 h-4 ${isRtl ? 'ml-2' : 'mr-2'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                    </svg>
+                    +20 123 456 789
+                  </p>
+                  <p className="flex items-center">
+                    <svg className={`w-4 h-4 ${isRtl ? 'ml-2' : 'mr-2'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                    </svg>
+                    support@cosmetics.com
+                  </p>
                 </div>
+
+                {/* Language Toggle in Mobile Menu */}
+                <div className="pt-2">
+                  <p className="text-xs font-medium text-gray-500 mb-2 flex items-center gap-1">
+                    <Globe className="w-3 h-3" />
+                    {t('select_language', 'Select Language')}
+                  </p>
+                  <div className="space-y-1">
+                    <button
+                      onClick={() => changeLanguage('en')}
+                      className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
+                        i18n.language === 'en' ? 'bg-[#5D2D2C] text-white' : 'bg-white text-gray-700 hover:bg-gray-100'
+                      }`}
+                    >
+                      <span className="text-xl">🇬🇧</span>
+                      <span className="text-sm font-medium">English</span>
+                      {i18n.language === 'en' && (
+                        <svg className="w-4 h-4 ml-auto" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                        </svg>
+                      )}
+                    </button>
+                    <button
+                      onClick={() => changeLanguage('ar')}
+                      className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
+                        i18n.language === 'ar' ? 'bg-[#5D2D2C] text-white' : 'bg-white text-gray-700 hover:bg-gray-100'
+                      }`}
+                    >
+                      <span className="text-xl">🇪🇬</span>
+                      <span className="text-sm font-medium">العربية</span>
+                      {i18n.language === 'ar' && (
+                        <svg className="w-4 h-4 ml-auto" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                        </svg>
+)}
+                </button>
               </div>
             </div>
           </div>
-        </>
-      )}
-    </nav>
+        </div>
+      </div>
+    </>
+  )}
+
+  <style>{`
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(-10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .animate-fadeIn {
+      animation: fadeIn 0.2s ease-out;
+    }
+
+    @keyframes slideDown {
+      from {
+        opacity: 0;
+        max-height: 0;
+      }
+      to {
+        opacity: 1;
+        max-height: 200px;
+      }
+    }
+
+    .animate-slideDown {
+      animation: slideDown 0.3s ease-out;
+    }
+
+    @keyframes slideInLeft {
+      from {
+        transform: translateX(-100%);
+      }
+      to {
+        transform: translateX(0);
+      }
+    }
+
+    @keyframes slideInRight {
+      from {
+        transform: translateX(100%);
+      }
+      to {
+        transform: translateX(0);
+      }
+    }
+
+    .animate-slideInLeft {
+      animation: slideInLeft 0.3s ease-out;
+    }
+
+    .animate-slideInRight {
+      animation: slideInRight 0.3s ease-out;
+    }
+  `}</style>
+</nav>
   );
 }
