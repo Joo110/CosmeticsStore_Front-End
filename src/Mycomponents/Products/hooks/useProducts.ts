@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect,useCallback  } from 'react';
 import productService from '../Services/productService';
 import { handleApiError } from '../../Users/utils/api';
 import type { Product, ProductsQuery } from '../../../types/product.types';
@@ -9,11 +9,13 @@ export const useProducts = (initialQuery: ProductsQuery = {}) => {
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState<ProductsQuery>(initialQuery);
 
-  const fetchProducts = async (newQuery?: ProductsQuery) => {
+  const fetchProducts = useCallback(
+  async (newQuery?: ProductsQuery) => {
     setLoading(true);
     setError(null);
+
     try {
-      const queryToUse = newQuery || query;
+      const queryToUse = newQuery ?? query;
       const data = await productService.getProducts(queryToUse);
       setProducts(data);
       return data;
@@ -24,8 +26,9 @@ export const useProducts = (initialQuery: ProductsQuery = {}) => {
     } finally {
       setLoading(false);
     }
-  };
-
+  },
+  [query]
+);
   const updateQuery = (newQuery: Partial<ProductsQuery>) => {
     const updatedQuery = { ...query, ...newQuery };
     setQuery(updatedQuery);

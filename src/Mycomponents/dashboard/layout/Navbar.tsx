@@ -86,13 +86,13 @@ export default function Navbar() {
               <svg className={`w-4 h-4 ${isRtl ? 'ml-1' : 'mr-1'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
               </svg>
-              +20 123 456 789
+              0566060682
             </span>
             <span className="flex items-center">
               <svg className={`w-4 h-4 ${isRtl ? 'ml-1' : 'mr-1'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
               </svg>
-              support@cosmetics.com
+              forsantop@gmail.com
             </span>
           </div>
           <div className="flex items-center gap-3">
@@ -224,26 +224,36 @@ export default function Navbar() {
           {/* Desktop Search Bar */}
           <div className="hidden md:block flex-1 max-w-md mx-4">
             <div className="relative">
-              <input
-                type="text"
-                placeholder={t('search_placeholder', 'Search for products...')}
-                className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#5D2D2C] focus:border-transparent transition-all bg-gray-50 focus:bg-white"
-                value={searchInput}
-                onChange={(e) => setSearchInput(e.target.value)}
-                onKeyDown={onKeyDownSearch}
-                aria-label={t('search_products', 'Search products')}
-                style={{ direction: isRtl ? 'rtl' : 'ltr' }}
-              />
-              <svg 
-                className={`${isRtl ? 'absolute right-3 left-auto' : 'absolute left-3'} top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 cursor-pointer`} 
-                fill="none" stroke="currentColor" viewBox="0 0 24 24"
-                onClick={() => handleSearch()}
-                role="button"
-                aria-hidden={false}
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-            </div>
+  <input
+    type="text"
+    placeholder={t('search_placeholder', 'Search for products...')}
+    value={searchInput}
+    onChange={(e) => setSearchInput(e.target.value)}
+    onKeyDown={onKeyDownSearch}
+    aria-label={t('search_products', 'Search products')}
+    style={{ direction: isRtl ? 'rtl' : 'ltr' }}
+    className={`w-full py-2.5 border border-gray-300 rounded-xl 
+      focus:outline-none focus:ring-2 focus:ring-[#5D2D2C] focus:border-transparent 
+      transition-all bg-gray-50 focus:bg-white
+      ${isRtl ? 'pr-10 pl-4' : 'pl-10 pr-4'}`}
+  />
+  <svg
+    className="absolute top-1/2 -translate-y-1/2 right-3 w-5 h-5 text-gray-400 cursor-pointer"
+    fill="none"
+    stroke="currentColor"
+    viewBox="0 0 24 24"
+    onClick={() => handleSearch()}
+    role="button"
+    aria-hidden={false}
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={2}
+      d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+    />
+  </svg>
+</div>
           </div>
 
           {/* Right Icons */}
@@ -270,7 +280,7 @@ export default function Navbar() {
 
             {/* Cart */}
             <Link
-              to="/shipping"
+              to="/checkout"
               className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg relative transition-colors"
               aria-label={t('shopping_cart', 'Shopping cart')}
             >
@@ -384,13 +394,13 @@ export default function Navbar() {
                     <svg className={`w-4 h-4 ${isRtl ? 'ml-2' : 'mr-2'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
                     </svg>
-                    +20 123 456 789
+                    0566060682
                   </p>
                   <p className="flex items-center">
                     <svg className={`w-4 h-4 ${isRtl ? 'ml-2' : 'mr-2'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                     </svg>
-                    support@cosmetics.com
+                    forsantop@gmail.com
                   </p>
                 </div>
 

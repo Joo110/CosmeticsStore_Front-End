@@ -1,24 +1,29 @@
+// src/components/ProtectedRoute.tsx
 import React from 'react';
-import { useAuthContext } from '../Mycomponents/Users/hooks/useAuthContext';
+import { Navigate } from 'react-router-dom';
+import { useAuthContext } from '../contexts/AuthContext';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
 }
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
-  const { loading } = useAuthContext();
+  const { isAuthenticated, loading } = useAuthContext();
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-pink-50 flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600" />
           <p className="mt-4 text-gray-600">Loading...</p>
         </div>
       </div>
     );
   }
 
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
 
   return <>{children}</>;
 };

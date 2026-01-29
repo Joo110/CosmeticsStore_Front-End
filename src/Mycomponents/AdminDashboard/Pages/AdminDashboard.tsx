@@ -1,4 +1,11 @@
-import  { useState, useEffect } from 'react';
+import React, {
+  useState,
+  useEffect,
+  useMemo,
+  useCallback,
+  useDeferredValue,
+  useRef
+} from 'react';
 import { Plus, Edit2, Trash2, X, Search, Menu } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
@@ -66,12 +73,15 @@ interface User {
 }
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-const AdminDashboard = () => {
+const AdminDashboard: React.FC = () => {
   const { t, i18n } = useTranslation();
 
-  const [activeTab, setActiveTab] = useState('products');
+  const [activeTab, setActiveTab] = useState<'products' | 'orders' | 'payments' | 'users'>('products');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
   const [products, setProducts] = useState<Product[]>([]);
+  const productsMapRef = useRef<Map<string, Product>>(new Map()); // for O(1) lookup in shared handlers
+
   const [categories, setCategories] = useState<Category[]>([
     { id: '3fa85f64-5717-4562-b3fc-2c963f66afa6', name: 'Electronics' },
     { id: '3fa85f64-5717-4562-b3fc-2c963f66afa7', name: 'Clothing' }
@@ -93,6 +103,7 @@ const AdminDashboard = () => {
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const deferredSearch = useDeferredValue(searchTerm);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
   const [newProduct, setNewProduct] = useState<Product>({
@@ -123,10 +134,20 @@ const AdminDashboard = () => {
         createdAtUtc: '2025-12-01T00:00:00'
       }
     ];
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setProducts(mockProducts);
   }, []);
 
-  const validateProductForm = () => {
+  // keep products map up-to-date (used by shared handlers to avoid per-row closures)
+  useEffect(() => {
+    const m = new Map<string, Product>();
+    for (const p of products) {
+      if (p.productId) m.set(p.productId, p);
+    }
+    productsMapRef.current = m;
+  }, [products]);
+
+  const validateProductForm = useCallback(() => {
     const errors: Record<string, string> = {};
     
     if (!newProduct.name.trim()) errors.name = t('validation_product_name_required', 'Product name is required');
@@ -142,48 +163,9 @@ const AdminDashboard = () => {
 
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
-  };
+  }, [newProduct, t]);
 
-  const handleAddProduct = () => {
-    if (!validateProductForm()) return;
-
-    const product: Product = {
-      ...newProduct,
-      // eslint-disable-next-line react-hooks/purity
-      productId: Math.random().toString(),
-      createdAtUtc: new Date().toISOString()
-    };
-    setProducts([...products, product]);
-    setShowProductModal(false);
-    resetProductForm();
-  };
-
-  const handleUpdateProduct = () => {
-    if (!validateProductForm()) return;
-
-    if (editingProduct?.productId) {
-      setProducts(products.map(p => 
-        p.productId === editingProduct.productId ? { ...newProduct, productId: editingProduct.productId } : p
-      ));
-      setShowProductModal(false);
-      setEditingProduct(null);
-      resetProductForm();
-    }
-  };
-
-  const handleDeleteProduct = (id: string) => {
-    if (confirm(t('confirm_delete_product', 'Are you sure you want to delete this product?'))) {
-      setProducts(products.filter(p => p.productId !== id));
-    }
-  };
-
-  const handleEditProduct = (product: Product) => {
-    setEditingProduct(product);
-    setNewProduct(product);
-    setShowProductModal(true);
-  };
-
-  const resetProductForm = () => {
+  const resetProductForm = useCallback(() => {
     setNewProduct({
       name: '',
       slug: '',
@@ -194,9 +176,65 @@ const AdminDashboard = () => {
       media: []
     });
     setFormErrors({});
-  };
+  }, []);
 
-  const handleAddCategory = () => {
+  const handleAddProduct = useCallback(() => {
+    if (!validateProductForm()) return;
+
+    const product: Product = {
+      ...newProduct,
+      productId: Math.random().toString(),
+      createdAtUtc: new Date().toISOString()
+    };
+    setProducts(prev => [...prev, product]);
+    setShowProductModal(false);
+    resetProductForm();
+  }, [newProduct, validateProductForm, resetProductForm]);
+
+  const handleUpdateProduct = useCallback(() => {
+    if (!validateProductForm()) return;
+
+    if (editingProduct?.productId) {
+      setProducts(prev => prev.map(p => 
+        p.productId === editingProduct.productId ? { ...newProduct, productId: editingProduct.productId } : p
+      ));
+      setShowProductModal(false);
+      setEditingProduct(null);
+      resetProductForm();
+    }
+  }, [editingProduct, newProduct, validateProductForm, resetProductForm]);
+
+  const handleDeleteProductById = useCallback((id: string) => {
+    if (!id) return;
+    if (confirm(t('confirm_delete_product', 'Are you sure you want to delete this product?'))) {
+      setProducts(prev => prev.filter(p => p.productId !== id));
+    }
+  }, [t]);
+
+  const handleEditProductById = useCallback((id: string) => {
+    if (!id) return;
+    const p = productsMapRef.current.get(id);
+    if (!p) return;
+    setEditingProduct(p);
+    setNewProduct(p);
+    setShowProductModal(true);
+  }, []);
+
+  // Shared click handlers that read data-id (avoids creating per-row closures)
+  const handleRowActionClick = useCallback((e: React.MouseEvent<HTMLElement>) => {
+    const el = e.currentTarget as HTMLElement;
+    const action = el.getAttribute('data-action');
+    const id = el.getAttribute('data-id') || '';
+    if (!action) return;
+
+    if (action === 'edit') {
+      handleEditProductById(id);
+    } else if (action === 'delete') {
+      handleDeleteProductById(id);
+    }
+  }, [handleEditProductById, handleDeleteProductById]);
+
+  const handleAddCategory = useCallback(() => {
     if (!newCategory.name.trim()) {
       alert(t('name_required', 'Category name is required'));
       return;
@@ -205,51 +243,63 @@ const AdminDashboard = () => {
       id: Math.random().toString(),
       name: newCategory.name
     };
-    setCategories([...categories, category]);
+    setCategories(prev => [...prev, category]);
     setShowCategoryModal(false);
     setNewCategory({ name: '' });
-  };
+  }, [newCategory, t]);
 
-  const handleDeleteOrder = (id: string) => {
+  const handleDeleteOrder = useCallback((id: string) => {
     if (confirm(t('confirm_delete_order', 'Are you sure you want to delete this order?'))) {
-      setOrders(orders.filter(o => o.orderId !== id));
+      setOrders(prev => prev.filter(o => o.orderId !== id));
     }
-  };
+  }, [t]);
 
-  const handleDeleteUser = (id: string) => {
+  const handleDeleteUser = useCallback((id: string) => {
     if (confirm(t('confirm_delete_user', 'Are you sure you want to delete this user?'))) {
-      setUsers(users.filter(u => u.userId !== id));
+      setUsers(prev => prev.filter(u => u.userId !== id));
     }
-  };
+  }, [t]);
 
-  const addVariant = () => {
-    setNewProduct({
-      ...newProduct,
-      variants: [...newProduct.variants, { sku: '', priceAmount: 0, priceCurrency: 'EGP', stock: 0, isActive: true }]
+  const addVariant = useCallback(() => {
+    setNewProduct(prev => ({
+      ...prev,
+      variants: [...prev.variants, { sku: '', priceAmount: 0, priceCurrency: 'EGP', stock: 0, isActive: true }]
+    }));
+  }, []);
+
+  const updateVariant = useCallback((index: number, field: keyof ProductVariant, value: any) => {
+    setNewProduct(prev => {
+      const updated = [...prev.variants];
+      updated[index] = { ...updated[index], [field]: value };
+      return { ...prev, variants: updated };
     });
-  };
+  }, []);
 
-  const updateVariant = (index: number, field: keyof ProductVariant, value: any) => {
-    const updatedVariants = [...newProduct.variants];
-    updatedVariants[index] = { ...updatedVariants[index], [field]: value };
-    setNewProduct({ ...newProduct, variants: updatedVariants });
-  };
+  const removeVariant = useCallback((index: number) => {
+    setNewProduct(prev => ({
+      ...prev,
+      variants: prev.variants.filter((_, i) => i !== index)
+    }));
+  }, []);
 
-  const removeVariant = (index: number) => {
-    setNewProduct({
-      ...newProduct,
-      variants: newProduct.variants.filter((_, i) => i !== index)
-    });
-  };
+  // memoized heavy values
+  const totalPayments = useMemo(() => payments.reduce((sum, p) => sum + p.amount, 0), [payments]);
 
-  const totalPayments = payments.reduce((sum, p) => sum + p.amount, 0);
-
-  const filteredProducts = products.filter(p => 
-    p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    p.slug.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredProducts = useMemo(() => {
+    const term = deferredSearch.toLowerCase();
+    if (!term) return products;
+    return products.filter(p =>
+      p.name.toLowerCase().includes(term) ||
+      p.slug.toLowerCase().includes(term)
+    );
+  }, [products, deferredSearch]);
 
   const isRtl = i18n.language === 'ar';
+
+  // simple handler for search input (stable reference)
+  const handleSearchInput = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchTerm(e.target.value);
+  }, []);
 
   return (
     <div dir={isRtl ? 'rtl' : 'ltr'} className="min-h-screen bg-gray-50">
@@ -262,7 +312,7 @@ const AdminDashboard = () => {
             {/* Mobile menu button */}
             <div className="flex items-center gap-2">
               <button
-                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                onClick={() => setMobileMenuOpen(s => !s)}
                 className="lg:hidden text-white p-2"
                 aria-label={t('open_menu', 'Open menu')}
               >
@@ -380,7 +430,7 @@ const AdminDashboard = () => {
                   type="text"
                   placeholder={t('search_placeholder_product', 'Search for a product...')}
                   value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
+                  onChange={handleSearchInput}
                   className="w-full px-4 py-3 pl-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#5D2D2C] focus:border-transparent"
                 />
                 <Search className="absolute left-4 top-3.5 text-gray-400" size={20} />
@@ -427,14 +477,18 @@ const AdminDashboard = () => {
                       <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm font-medium">
                         <div className="flex gap-2">
                           <button
-                            onClick={() => handleEditProduct(product)}
+                            data-action="edit"
+                            data-id={product.productId}
+                            onClick={handleRowActionClick}
                             className="text-blue-600 hover:text-blue-900"
                             aria-label={t('edit_product_modal_title', 'Edit Product')}
                           >
                             <Edit2 size={18} />
                           </button>
                           <button
-                            onClick={() => handleDeleteProduct(product.productId!)}
+                            data-action="delete"
+                            data-id={product.productId}
+                            onClick={handleRowActionClick}
                             className="text-red-600 hover:text-red-900"
                             aria-label={t('confirm_delete_product', 'Delete product')}
                           >
@@ -463,14 +517,18 @@ const AdminDashboard = () => {
                         <h3 className="text-sm font-semibold text-gray-900 truncate">{product.name}</h3>
                         <div className="flex items-center gap-2">
                           <button
-                            onClick={() => handleEditProduct(product)}
+                            data-action="edit"
+                            data-id={product.productId}
+                            onClick={handleRowActionClick}
                             className="p-1 text-blue-600 hover:text-blue-900"
                             aria-label={t('edit_product_modal_title', 'Edit Product')}
                           >
                             <Edit2 size={16} />
                           </button>
                           <button
-                            onClick={() => handleDeleteProduct(product.productId!)}
+                            data-action="delete"
+                            data-id={product.productId}
+                            onClick={handleRowActionClick}
                             className="p-1 text-red-600 hover:text-red-900"
                             aria-label={t('confirm_delete_product', 'Delete product')}
                           >
@@ -686,7 +744,7 @@ const AdminDashboard = () => {
                   <input
                     type="text"
                     value={newProduct.name}
-                    onChange={(e) => setNewProduct({ ...newProduct, name: e.target.value })}
+                    onChange={(e) => setNewProduct(prev => ({ ...prev, name: e.target.value }))}
                     className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-[#5D2D2C] ${formErrors.name ? 'border-red-500' : 'border-gray-300'}`}
                   />
                   {formErrors.name && <p className="text-red-500 text-xs mt-1">{formErrors.name}</p>}
@@ -697,7 +755,7 @@ const AdminDashboard = () => {
                   <input
                     type="text"
                     value={newProduct.slug}
-                    onChange={(e) => setNewProduct({ ...newProduct, slug: e.target.value })}
+                    onChange={(e) => setNewProduct(prev => ({ ...prev, slug: e.target.value }))}
                     className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-[#5D2D2C] ${formErrors.slug ? 'border-red-500' : 'border-gray-300'}`}
                   />
                   {formErrors.slug && <p className="text-red-500 text-xs mt-1">{formErrors.slug}</p>}
@@ -707,7 +765,7 @@ const AdminDashboard = () => {
                   <label className="block text-sm font-medium text-gray-700 mb-1">{t('label_description', 'Description *')}</label>
                   <textarea
                     value={newProduct.description}
-                    onChange={(e) => setNewProduct({ ...newProduct, description: e.target.value })}
+                    onChange={(e) => setNewProduct(prev => ({ ...prev, description: e.target.value }))}
                     rows={3}
                     className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-[#5D2D2C] ${formErrors.description ? 'border-red-500' : 'border-gray-300'}`}
                   />
@@ -718,7 +776,7 @@ const AdminDashboard = () => {
                   <label className="block text-sm font-medium text-gray-700 mb-1">{t('label_category', 'Category *')}</label>
                   <select
                     value={newProduct.categoryId}
-                    onChange={(e) => setNewProduct({ ...newProduct, categoryId: e.target.value })}
+                    onChange={(e) => setNewProduct(prev => ({ ...prev, categoryId: e.target.value }))}
                     className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-[#5D2D2C] ${formErrors.categoryId ? 'border-red-500' : 'border-gray-300'}`}
                   >
                     <option value="">{t('select_category_placeholder', 'Select a category')}</option>
@@ -733,7 +791,7 @@ const AdminDashboard = () => {
                   <input
                     type="checkbox"
                     checked={newProduct.isPublished}
-                    onChange={(e) => setNewProduct({ ...newProduct, isPublished: e.target.checked })}
+                    onChange={(e) => setNewProduct(prev => ({ ...prev, isPublished: e.target.checked }))}
                     className="h-4 w-4 text-[#5D2D2C] focus:ring-[#5D2D2C] rounded"
                   />
                   <label className="ml-2 text-sm text-gray-700">{t('label_published', 'Published')}</label>

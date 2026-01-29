@@ -10,8 +10,27 @@ import type {
   UpdateProfileRequest,
   ChangePasswordRequest,
 } from '../../../types/auth.types';
-import { AuthContext } from '../../../contexts/AuthProvider';
+import { AuthContext } from '../../../contexts/AuthContext';
 import type { AuthContextType } from '../../../contexts/AuthContext';
+
+// Utility to parse JWT
+const parseJwt = (token: string | undefined) => {
+  if (!token) return null;
+  try {
+    const base64Url = token.split('.')[1];
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const jsonPayload = decodeURIComponent(
+      atob(base64)
+        .split('')
+        .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+        .join('')
+    );
+    return JSON.parse(jsonPayload);
+  } catch (err) {
+    console.error('Error parsing JWT', err);
+    return null;
+  }
+};
 
 export const useAuth = () => {
   const [loading, setLoading] = useState(false);
@@ -28,8 +47,17 @@ export const useAuth = () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await authService.login(data);
-      setCurrentUser(response);
+      const resp = await authService.login(data);
+
+      // Extract roles from JWT
+      const payload = parseJwt(resp.token);
+      const roles: string[] = payload?.['http://schemas.microsoft.com/ws/2008/06/identity/claims/role']
+        ? [payload['http://schemas.microsoft.com/ws/2008/06/identity/claims/role']]
+        : [];
+
+      const userWithRoles = { ...resp, roles };
+
+      setCurrentUser(userWithRoles);
       navigate('/profile');
       return true;
     } catch (err) {
@@ -40,13 +68,21 @@ export const useAuth = () => {
     }
   };
 
-  // Register
+  // Register (if you also return token)
   const register = async (data: RegisterRequest) => {
     setLoading(true);
     setError(null);
     try {
-      const response = await authService.register(data);
-      setCurrentUser(response);
+      const resp = await authService.register(data);
+
+      const payload = parseJwt(resp.token);
+      const roles: string[] = payload?.['http://schemas.microsoft.com/ws/2008/06/identity/claims/role']
+        ? [payload['http://schemas.microsoft.com/ws/2008/06/identity/claims/role']]
+        : [];
+
+      const userWithRoles = { ...resp, roles };
+
+      setCurrentUser(userWithRoles);
       navigate('/profile');
       return true;
     } catch (err) {
@@ -95,7 +131,6 @@ export const useProfile = () => {
   const [error, setError] = useState<string | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
 
-  // Get Profile
   const getProfile = async () => {
     setLoading(true);
     setError(null);
@@ -111,7 +146,6 @@ export const useProfile = () => {
     }
   };
 
-  // Update Profile
   const updateProfile = async (data: UpdateProfileRequest) => {
     setLoading(true);
     setError(null);
@@ -127,7 +161,6 @@ export const useProfile = () => {
     }
   };
 
-  // Change Password
   const changePassword = async (data: ChangePasswordRequest) => {
     setLoading(true);
     setError(null);

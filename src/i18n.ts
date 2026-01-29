@@ -25,7 +25,7 @@ const resources = {
       my_account: "My Account",
       toggle_menu: "Toggle menu",
       tagline: "Beauty & Cosmetics",
-
+update_to_inventory_success: "Item updated successfully!",
       makeup: "Makeup",
       brands: "Brands",
       perfume: "Perfume",
@@ -109,8 +109,8 @@ const resources = {
       footer_track_order: "Track Order",
       footer_faq: "FAQ",
       footer_get_in_touch: "Get In Touch",
-      footer_phone: "+20 123 456 789",
-      footer_email: "support@cosmetics.com",
+      footer_phone: "0566060682",
+      footer_email: "forsantop@gmail.com",
       footer_address: "123 Beauty Street, NY 10001",
       footer_privacy_policy: "Privacy Policy",
       footer_terms_of_service: "Terms of Service",
@@ -127,7 +127,7 @@ const resources = {
       footer_brand: "GlowStore",
       // any other keys you might need (examples)
       trusted_by_title: "Trusted by Thousands",
-
+      added_to_inventory_success: "Added item to inventory successfully!",
       // --- Products / Catalog ---
       products: "Products",
       show_product: "Show product",
@@ -473,7 +473,7 @@ const resources = {
   "expiry_date": "Expiry Date",
   "email_address": "Email Address",
   "address": "Address",
-
+address_label: "Address",
   "email_required": "Email is required",
   "email_length_invalid": "Email length is invalid",
   "email_invalid": "Please enter a valid email address",
@@ -739,10 +739,9 @@ const resources = {
       my_account: "حسابي",
       toggle_menu: "قائمة",
       tagline: "مستحضرات التجميل",
-
-         // Site / Header / General
-
-      makeup: "مكياج",   // أو ضع "مكياج"
+      added_to_inventory_success: "تمت إضافة العنصر إلى المخزون بنجاح!",
+update_to_inventory_success: "تم تحديث العنصر في المخزون بنجاح!",
+      makeup: "مكياج",  
       brands: "براند",
       perfume: "عطور",
       shop_now: "تسوق الآن",
@@ -1026,7 +1025,7 @@ const resources = {
       "next_page": "الصفحة التالية",
       "no_products_available": "لا توجد منتجات متاحة",
       "check_back_later": "تحقق مرة أخرى لاحقاً للحصول على منتجات جديدة",
-
+address_label: "العنوان",
       "// ===== ProductsSection Translations =====": "",
       "search_results_for": "نتائج البحث عن \"{{term}}\"",
   "image": "صورة",

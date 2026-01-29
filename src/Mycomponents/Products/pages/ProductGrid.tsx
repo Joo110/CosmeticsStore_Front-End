@@ -334,7 +334,7 @@ const ProductGrid: React.FC<ProductGridProps> = ({
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                   loading="lazy"
                   onError={(e: any) => {
-                    if (e?.target) e.target.src = 'https://via.placeholder.com/600x600?text=No+Image';
+                    if (e?.target) e.target.src = '';
                   }}
                 />
               ) : (
@@ -364,7 +364,7 @@ const ProductGrid: React.FC<ProductGridProps> = ({
                         className="w-full h-full object-cover"
                         loading="lazy"
                         onError={(e: any) => {
-                          if (e?.target) e.target.src = 'https://via.placeholder.com/80x80?text=No';
+                          if (e?.target) e.target.src = '';
                         }}
                       />
                     </button>

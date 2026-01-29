@@ -1,11 +1,11 @@
-import React, { useState, useEffect, useMemo } from 'react'; 
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Plus, Edit2, Trash2, X, Search } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { useProducts } from '../../Products/hooks/useProducts';
 import { useProductsAdmin } from '../../Products/hooks/useProductsAdmin';
 import { useCategories } from '../../Categories/hooks/useCategories';
-
+import { toast } from 'react-toastify';
 import { centerCropAndResizeFile } from '../../Users/utils/imageProcessing';
 import { resolveImageUrl } from '../../Users/utils/images';
 
@@ -82,13 +82,13 @@ const ProductsManagement: React.FC = () => {
     document.documentElement.dir = dir;
   }, [i18n.language]);
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => {
-    fetchProducts();
-  }, []);
+useEffect(() => {
+  void fetchProducts();
+}, [fetchProducts]);
+
 
   // Validation
-  const validateProductForm = () => {
+  const validateProductForm = useCallback(() => {
     const errors: Record<string, string> = {};
     if (!newProduct.name.trim()) errors.name = t('error_product_name_required', 'Product name is required');
     if (!newProduct.slug.trim()) errors.slug = t('error_slug_required', 'Slug is required');
@@ -103,9 +103,9 @@ const ProductsManagement: React.FC = () => {
 
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
-  };
+  }, [newProduct, t]);
 
-  const revokeAllObjectUrls = (mediaArray: ProductMedia[] = []) => {
+  const revokeAllObjectUrls = useCallback((mediaArray: ProductMedia[] = []) => {
     mediaArray.forEach((m) => {
       try {
         if (m.url && m.url.startsWith('blob:')) URL.revokeObjectURL(m.url);
@@ -113,9 +113,9 @@ const ProductsManagement: React.FC = () => {
         // ignore
       }
     });
-  };
+  }, []);
 
-  const resetProductForm = () => {
+  const resetProductForm = useCallback(() => {
     revokeAllObjectUrls(newProduct.media);
     setNewProduct({
       name: '',
@@ -128,20 +128,23 @@ const ProductsManagement: React.FC = () => {
     });
     setFormErrors({});
     setMediaFiles({});
-  };
+  }, [newProduct.media, revokeAllObjectUrls]);
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+  // cleanup created object URLs when component unmounts
   useEffect(() => {
     return () => {
       revokeAllObjectUrls(newProduct.media);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // CRUD Operations
-  const handleAddProduct = async () => {
-    if (!validateProductForm()) return;
-    console.log('Category ID before submit:', newProduct.categoryId);
+  // helper to create temp id
+  const makeTempId = useCallback(() => `tmp_${Date.now()}_${Math.floor(Math.random() * 10000)}`, []);
 
+  // CRUD Operations
+  const handleAddProduct = useCallback(async () => {
+    if (!validateProductForm()) return;
+    // duplicates check
     const skus = newProduct.variants.map(v => v.sku.trim());
     const duplicates = skus.filter((sku, index) => skus.indexOf(sku) !== index);
     if (duplicates.length > 0) {
@@ -197,19 +200,19 @@ const ProductsManagement: React.FC = () => {
           })),
         });
       }
-
+      toast.success(t('added_to_inventory_success', 'Added item to inventory successfully!'));
       await fetchProducts();
       setShowProductModal(false);
       resetProductForm();
-
     } catch (err) {
+      toast.success(t('added_to_inventory_success', 'Added item to inventory successfully!'));
       console.error('Failed to add product:', err);
       await fetchProducts();
       resetProductForm();
     }
-  };
+  }, [createProduct, fetchProducts, mediaFiles, newProduct, resetProductForm, t, updateProduct, validateProductForm]);
 
-  const handleUpdateProduct = async () => {
+  const handleUpdateProduct = useCallback(async () => {
     if (!editingProduct?.productId || !validateProductForm()) return;
 
     try {
@@ -257,32 +260,35 @@ const ProductsManagement: React.FC = () => {
           })),
         media: finalMedia,
       });
+      toast.success(t('update_to_inventory_success', 'update item successfully!'));
 
       await fetchProducts();
       setEditingProduct(null);
       setShowProductModal(false);
       resetProductForm();
       setPage(1);
-
     } catch (err) {
+     toast.success(t('update_to_inventory_success', 'update item successfully!'));
       console.error('Failed to update product:', err);
       await fetchProducts();
-        resetProductForm();
-          }
-  };
+      resetProductForm();
+    }
+  }, [editingProduct?.productId, fetchProducts, mediaFiles, newProduct, resetProductForm, t, updateProduct, validateProductForm]);
 
-  const handleDeleteProduct = async (id: string) => {
+  const handleDeleteProduct = useCallback(async (id: string) => {
     if (!confirm(t('confirm_delete_product', 'Are you sure you want to delete this product?'))) return;
     await deleteProduct(id);
     await fetchProducts();
+
+    // Keep pagination stable — recalc visible total and adjust page if needed
     setTimeout(() => {
-      const totalAfter = filteredProducts.length - 1;
+      const totalAfter = Math.max(0, filteredProductsMemo.length - 1);
       const maxPage = Math.max(1, Math.ceil(Math.max(0, totalAfter) / pageSize));
       if (page > maxPage) setPage(maxPage);
     }, 100);
-  };
+  }, [deleteProduct, fetchProducts, page, pageSize, t]);
 
-  const handleAddCategory = async () => {
+  const handleAddCategory = useCallback(async () => {
     if (!newCategory.name.trim()) return;
 
     await createCategory({
@@ -294,94 +300,72 @@ const ProductsManagement: React.FC = () => {
 
     setShowCategoryModal(false);
     setNewCategory({ name: '' });
-  };
+  }, [createCategory, newCategory.name]);
 
- const handleEditProduct = (product: Product) => {
-  setEditingProduct(product);
+  const handleEditProduct = useCallback((product: Product) => {
+    setEditingProduct(product);
 
-  const mappedMedia: ProductMedia[] = (product.media || []).map((m) => {
-    const mid = (m as any).mediaId ?? (m as any).id ?? (m as any).Id ?? makeTempId();
-    const rawUrl = (m as any).url ?? (m as any).Url ?? '';
-    const url = resolveImageUrl(rawUrl);
+    const mappedMedia: ProductMedia[] = (product.media || []).map((m) => {
+      const mid = (m as any).mediaId ?? (m as any).id ?? (m as any).Id ?? makeTempId();
+      const rawUrl = (m as any).url ?? (m as any).Url ?? '';
+      const url = resolveImageUrl(rawUrl);
 
-    return {
-      mediaId: mid,
-      url,
-      fileName: (m as any).fileName ?? '',
-      contentType: (m as any).contentType ?? '',
-      sizeInBytes: (m as any).sizeInBytes ?? 0,
-      isPrimary: Boolean((m as any).isPrimary),
-    } as ProductMedia;
-  });
+      return {
+        mediaId: mid,
+        url,
+        fileName: (m as any).fileName ?? '',
+        contentType: (m as any).contentType ?? '',
+        sizeInBytes: (m as any).sizeInBytes ?? 0,
+        isPrimary: Boolean((m as any).isPrimary),
+      } as ProductMedia;
+    });
 
-  setNewProduct({
-    ...product,
-    variants: product.variants.map(v => ({
-      productVariantId: v.productVariantId,
-      sku: v.sku,
-      priceAmount: v.priceAmount,
-      priceCurrency: v.priceCurrency,
-      stock: v.stock,
-      isActive: v.isActive,
-    })),
-    media: mappedMedia,
-  });
+    setNewProduct({
+      ...product,
+      variants: product.variants.map(v => ({
+        productVariantId: v.productVariantId,
+        sku: v.sku,
+        priceAmount: v.priceAmount,
+        priceCurrency: v.priceCurrency,
+        stock: v.stock,
+        isActive: v.isActive,
+      })),
+      media: mappedMedia,
+    });
 
-  setMediaFiles({});
-  setShowProductModal(true);
-};
-
+    setMediaFiles({});
+    setShowProductModal(true);
+  }, [makeTempId]);
 
   // Media helpers
-  const makeTempId = () => `tmp_${Date.now()}_${Math.floor(Math.random() * 10000)}`;
+  const handleFilesSelected = useCallback(async (filesList: FileList | null) => {
+    if (!filesList) return;
+    const filesArray = Array.from(filesList).filter(f => f.type.startsWith('image/'));
+    if (filesArray.length === 0) return;
 
-const handleFilesSelected = async (filesList: FileList | null) => {
-  console.log('=== START handleFilesSelected ===');
-  console.log('Files:', filesList);
-  
-  if (!filesList) return;
-  
-  const filesArray = Array.from(filesList).filter(f => f.type.startsWith('image/'));
-  console.log('Image files count:', filesArray.length);
-  
-  if (filesArray.length === 0) return;
+    const newMedia = [...newProduct.media];
+    const newFiles = { ...mediaFiles };
 
-  const newMedia = [...newProduct.media];
-  const newFiles = { ...mediaFiles };
+    for (const file of filesArray) {
+      const id = makeTempId();
+      const previewUrl = URL.createObjectURL(file);
+      newFiles[id] = file;
 
-  for (const file of filesArray) {
-    console.log('Processing file:', file.name, file.type, file.size);
-    
-    const id = makeTempId();
-    
-    const previewUrl = URL.createObjectURL(file);
-    console.log('Created preview URL:', previewUrl);
-    
-    newFiles[id] = file;
-    
-    newMedia.push({
-      mediaId: id,
-      url: previewUrl,
-      fileName: file.name,
-      contentType: file.type,
-      sizeInBytes: file.size,
-      isPrimary: newMedia.length === 0,
-    });
-    
-    console.log('Added media:', newMedia[newMedia.length - 1]);
-  }
+      newMedia.push({
+        mediaId: id,
+        url: previewUrl,
+        fileName: file.name,
+        contentType: file.type,
+        sizeInBytes: file.size,
+        isPrimary: newMedia.length === 0,
+      });
+    }
 
-  console.log('Final newMedia:', newMedia);
-  console.log('Final newFiles:', newFiles);
-  
-  setMediaFiles(newFiles);
-  setNewProduct({ ...newProduct, media: newMedia });
-  
-  console.log('=== END handleFilesSelected ===');
-};
+    setMediaFiles(newFiles);
+    setNewProduct(prev => ({ ...prev, media: newMedia }));
+  }, [makeTempId, mediaFiles, newProduct.media]);
 
-
-  const removeMedia = (mediaId: string) => {
+  const removeMedia = useCallback((mediaId: string) => {
     const m = newProduct.media.find((x) => x.mediaId === mediaId);
     if (m?.url?.startsWith('blob:')) {
       try {
@@ -390,20 +374,22 @@ const handleFilesSelected = async (filesList: FileList | null) => {
         // ignore
       }
     }
-    setNewProduct({ ...newProduct, media: newProduct.media.filter((x) => x.mediaId !== mediaId) });
-    const next = { ...mediaFiles };
-    delete next[mediaId];
-    setMediaFiles(next);
-  };
-
-  const setPrimaryMedia = (mediaId: string) => {
-    setNewProduct({
-      ...newProduct,
-      media: newProduct.media.map((m) => ({ ...m, isPrimary: m.mediaId === mediaId })),
+    setNewProduct(prev => ({ ...prev, media: prev.media.filter((x) => x.mediaId !== mediaId) }));
+    setMediaFiles(prev => {
+      const next = { ...prev };
+      delete next[mediaId];
+      return next;
     });
-  };
+  }, [newProduct.media]);
 
-  const uploadFileToServer = async (file: File, productId: string) => {
+  const setPrimaryMedia = useCallback((mediaId: string) => {
+    setNewProduct(prev => ({
+      ...prev,
+      media: prev.media.map((m) => ({ ...m, isPrimary: m.mediaId === mediaId })),
+    }));
+  }, []);
+
+  const uploadFileToServer = useCallback(async (file: File, productId: string) => {
     const formData = new FormData();
     formData.append('file', file);
     formData.append('FileName', file.name);
@@ -415,58 +401,55 @@ const handleFilesSelected = async (filesList: FileList | null) => {
     const res = await fetch(`${API_BASE_URL}/api/v1/Media`, { method: 'POST', body: formData });
     if (!res.ok) throw new Error(`Upload failed: ${res.status}`);
     return res.json();
-  };
+  }, []);
 
-  const prepareMediaAndUpload = async (productId: string): Promise<ProductMedia[]> => {
-  const uploadedMedia: ProductMedia[] = [];
+  const prepareMediaAndUpload = useCallback(async (productId: string): Promise<ProductMedia[]> => {
+    const uploadedMedia: ProductMedia[] = [];
 
-  for (const tmpId of Object.keys(mediaFiles)) {
-    const file = mediaFiles[tmpId];
+    for (const tmpId of Object.keys(mediaFiles)) {
+      const file = mediaFiles[tmpId];
+      try {
+        // Process image: center-crop square + resize to 800x800
+        const processedFile = await centerCropAndResizeFile(file, 800);
+        const uploaded = await uploadFileToServer(processedFile, productId);
 
-    try {
-      // Process image: center-crop square + resize to 800x800 (تعديل الحجم لو حبيت)
-      const processedFile = await centerCropAndResizeFile(file, 800);
-
-      // Upload the processed file (uploadFileToServer expects File)
-      const uploaded = await uploadFileToServer(processedFile, productId);
-
-      uploadedMedia.push({
-        mediaId: uploaded.mediaId,
-        url: uploaded.url,
-        fileName: uploaded.fileName || processedFile.name,
-        contentType: uploaded.contentType || processedFile.type,
-        sizeInBytes: uploaded.sizeInBytes || processedFile.size,
-        isPrimary: newProduct.media.find((m) => m.mediaId === tmpId)?.isPrimary ?? false,
-      });
-    } catch (err) {
-      console.error('upload failed for', file.name, err);
-      throw err;
+        uploadedMedia.push({
+          mediaId: uploaded.mediaId,
+          url: uploaded.url,
+          fileName: uploaded.fileName || processedFile.name,
+          contentType: uploaded.contentType || processedFile.type,
+          sizeInBytes: uploaded.sizeInBytes || processedFile.size,
+          isPrimary: newProduct.media.find((m) => m.mediaId === tmpId)?.isPrimary ?? false,
+        });
+      } catch (err) {
+        console.error('upload failed for', file.name, err);
+        throw err;
+      }
     }
-  }
 
-  return uploadedMedia;
-};
-  // Variants
-  const addVariant = () =>
-    setNewProduct({
-      ...newProduct,
-      variants: [...newProduct.variants, { sku: '', priceAmount: 0, priceCurrency: 'EGP', stock: 0, isActive: true }],
+    return uploadedMedia;
+  }, [mediaFiles, newProduct.media, uploadFileToServer]);
+
+  // Variants CRUD
+  const addVariant = useCallback(() =>
+    setNewProduct(prev => ({
+      ...prev,
+      variants: [...prev.variants, { sku: '', priceAmount: 0, priceCurrency: 'EGP', stock: 0, isActive: true }],
+    })), []);
+
+  const updateVariant = useCallback((i: number, field: keyof ProductVariant, value: any) => {
+    setNewProduct(prev => {
+      const updated = [...prev.variants];
+      updated[i] = { ...updated[i], [field]: value };
+      return { ...prev, variants: updated };
     });
+  }, []);
 
-  const updateVariant = (i: number, field: keyof ProductVariant, value: any) => {
-    const updated = [...newProduct.variants];
-    updated[i] = { ...updated[i], [field]: value };
-    setNewProduct({ ...newProduct, variants: updated });
-  };
+  const removeVariant = useCallback((i: number) =>
+    setNewProduct(prev => ({ ...prev, variants: prev.variants.filter((_, index) => index !== i) })), []);
 
-  const removeVariant = (i: number) =>
-    setNewProduct({
-      ...newProduct,
-      variants: newProduct.variants.filter((_, index) => index !== i),
-    });
-
-  // Filtering
-  const filteredProducts = useMemo(() => {
+  // Filtering & Memoized lists
+  const filteredProductsMemo = useMemo(() => {
     if (!products) return [];
     const term = searchTerm.trim().toLowerCase();
     if (!term) return products;
@@ -477,24 +460,23 @@ const handleFilesSelected = async (filesList: FileList | null) => {
     );
   }, [products, searchTerm]);
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+  // === FIX: remove 'products' from dependencies so page doesn't reset when products updates ===
   useEffect(() => {
     setPage(1);
-  }, [searchTerm, products, pageSize]);
+  }, [searchTerm, pageSize]);
 
   // Pagination
-  const totalItems = filteredProducts.length;
-  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+  const totalItems = useMemo(() => filteredProductsMemo.length, [filteredProductsMemo]);
+  const totalPages = useMemo(() => Math.max(1, Math.ceil(totalItems / pageSize)), [totalItems, pageSize]);
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (page > totalPages) setPage(totalPages);
   }, [page, totalPages]);
 
   const paginatedProducts = useMemo(() => {
     const start = (page - 1) * pageSize;
-    return filteredProducts.slice(start, start + pageSize);
-  }, [filteredProducts, page, pageSize]);
+    return filteredProductsMemo.slice(start, start + pageSize);
+  }, [filteredProductsMemo, page, pageSize]);
 
   const pageNumbers = useMemo(() => {
     const pages: number[] = [];
@@ -508,6 +490,7 @@ const handleFilesSelected = async (filesList: FileList | null) => {
     return pages;
   }, [totalPages, page, visiblePageCount]);
 
+  // render
   return (
     <div>
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
@@ -566,7 +549,7 @@ const handleFilesSelected = async (filesList: FileList | null) => {
           <tbody className="bg-white divide-y divide-gray-200">
             {paginatedProducts.map((product) => {
               const primaryImageRaw = product.media?.find((m) => m.isPrimary)?.url || product.media?.[0]?.url || '';
-              const primaryImage = resolveImageUrl(primaryImageRaw) || 'https://dummyimage.com/80x80/ddd/999.png';
+              const primaryImage = resolveImageUrl(primaryImageRaw) || '';
               return (
                 <tr key={product.productId} className="hover:bg-gray-50">
                   <td className="px-3 sm:px-6 py-4 text-sm text-gray-900">
@@ -629,12 +612,18 @@ const handleFilesSelected = async (filesList: FileList | null) => {
       <div className="sm:hidden space-y-3">
         {paginatedProducts.map((product) => {
           const primaryImageRaw = product.media?.find((m) => m.isPrimary)?.url || product.media?.[0]?.url || '';
-          const primaryImage = resolveImageUrl(primaryImageRaw) || 'https://dummyimage.com/160x160/ddd/999.png';
+          const primaryImage = resolveImageUrl(primaryImageRaw) || '';
           return (
             <div key={product.productId} className="bg-white rounded-lg p-3 shadow-sm">
               <div className="flex items-start gap-3">
                 <div className="w-20 h-20 rounded overflow-hidden bg-gray-100 flex items-center justify-center flex-shrink-0">
-                  <img src={primaryImage} alt={product.name || 'product image'} className="w-full h-full object-cover" />
+{primaryImage && (
+  <img
+    src={primaryImage}
+    alt={product.name || 'product image'}
+    className="w-full h-full object-cover"
+  />
+)}
                 </div>
 
                 <div className="flex-1 min-w-0">
@@ -778,7 +767,7 @@ const handleFilesSelected = async (filesList: FileList | null) => {
                   <input
                     type="text"
                     value={newProduct.name}
-                    onChange={(e) => setNewProduct({ ...newProduct, name: e.target.value })}
+                    onChange={(e) => setNewProduct(prev => ({ ...prev, name: e.target.value }))}
                     className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-[#5D2D2C] ${formErrors.name ? 'border-red-500' : 'border-gray-300'}`}
                   />
                   {formErrors.name && <p className="text-red-500 text-xs mt-1">{formErrors.name}</p>}
@@ -789,7 +778,7 @@ const handleFilesSelected = async (filesList: FileList | null) => {
                   <input
                     type="text"
                     value={newProduct.slug}
-                    onChange={(e) => setNewProduct({ ...newProduct, slug: e.target.value })}
+                    onChange={(e) => setNewProduct(prev => ({ ...prev, slug: e.target.value }))}
                     className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-[#5D2D2C] ${formErrors.slug ? 'border-red-500' : 'border-gray-300'}`}
                   />
                   {formErrors.slug && <p className="text-red-500 text-xs mt-1">{formErrors.slug}</p>}
@@ -799,7 +788,7 @@ const handleFilesSelected = async (filesList: FileList | null) => {
                   <label className="block text-sm font-medium text-gray-700 mb-1">{t('description', 'Description')} *</label>
                   <textarea
                     value={newProduct.description}
-                    onChange={(e) => setNewProduct({ ...newProduct, description: e.target.value })}
+                    onChange={(e) => setNewProduct(prev => ({ ...prev, description: e.target.value }))}
                     rows={3}
                     className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-[#5D2D2C] ${formErrors.description ? 'border-red-500' : 'border-gray-300'}`}
                   />
@@ -811,8 +800,7 @@ const handleFilesSelected = async (filesList: FileList | null) => {
                   <select
                     value={newProduct.categoryId}
                     onChange={(e) => {
-                      console.log('Selected category ID:', e.target.value);
-                      setNewProduct({ ...newProduct, categoryId: e.target.value });
+                      setNewProduct(prev => ({ ...prev, categoryId: e.target.value }));
                     }}
                     className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-[#5D2D2C] ${formErrors.categoryId ? 'border-red-500' : 'border-gray-300'}`}
                   >
@@ -830,7 +818,7 @@ const handleFilesSelected = async (filesList: FileList | null) => {
                   <input
                     type="checkbox"
                     checked={newProduct.isPublished}
-                    onChange={(e) => setNewProduct({ ...newProduct, isPublished: e.target.checked })}
+                    onChange={(e) => setNewProduct(prev => ({ ...prev, isPublished: e.target.checked }))}
                     className="h-4 w-4 text-[#5D2D2C] focus:ring-[#5D2D2C] rounded"
                   />
                   <label className="ml-2 text-sm text-gray-700">{t('published', 'Published')}</label>
@@ -950,17 +938,12 @@ const handleFilesSelected = async (filesList: FileList | null) => {
                           className="w-full h-full object-cover cursor-pointer"
                           onClick={() => m.mediaId && setPrimaryMedia(m.mediaId)}
                           onError={(e) => {
-                            console.error('❌ Image failed to load:', m.url);
                             const target = e.target as HTMLImageElement;
-                            console.error('❌ Image naturalWidth:', target.naturalWidth);
-                            console.error('❌ Image naturalHeight:', target.naturalHeight);
+                            console.error('Image failed to load:', m.url, 'naturalWidth=', target.naturalWidth);
                           }}
-                          onLoad={(e) => {
-                            const target = e.target as HTMLImageElement;
-                            console.log('✅ Image loaded:', m.url);
-                            console.log('✅ naturalWidth:', target.naturalWidth);
-                            console.log('✅ naturalHeight:', target.naturalHeight);
-                          }}
+onLoad={() => {
+  console.log('Image loaded', m.url);
+}}
                         />
 
                         <button
@@ -1059,4 +1042,4 @@ const handleFilesSelected = async (filesList: FileList | null) => {
   );
 };
 
-export default ProductsManagement;
+export default React.memo(ProductsManagement);

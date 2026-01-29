@@ -57,3 +57,10 @@ export interface ApiError {
   message: string;
   errors?: Record<string, string[]>;
 }
+
+export interface AuthResponse {
+  id: string;
+  email: string;
+  role: 'Admin' | 'user';
+  // باقي البيانات
+}

@@ -1,11 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Trash2, Search, X, Package, Calendar, User, DollarSign, FileText, ArrowLeft } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useOrders } from '../../orders/hook/useOrders';
 import { useProducts } from '../../Products/hooks/useProducts';
 import { useUsers } from '../../Users/hooks/useUsers';
 import type { OrderDto } from '../../../types/order.types';
-import type { UserDto } from '../../../types/user.types';
+
+
+    /* eslint-disable @typescript-eslint/no-explicit-any */
 
 const OrdersManagement: React.FC = () => {
   const { t, i18n } = useTranslation();
@@ -28,128 +30,182 @@ const OrdersManagement: React.FC = () => {
   const { products } = useProducts();
   const { users, fetchUsers } = useUsers(1000);
 
-  const [productMap, setProductMap] = useState<Map<string, string>>(new Map());
-  const [userMap, setUserMap] = useState<Map<string, string>>(new Map());
-
-  useEffect(() => {
-    if (products.length > 0) {
-      const map = new Map<string, string>();
-      products.forEach((product) => {
-        product.variants?.forEach((variant) => {
-          // تأكد إن productVariantId موجود قبل الاستخدام
-          if (variant.productVariantId) {
-            map.set(variant.productVariantId, product.name);
-          }
-        });
+  // build productMap and userMap via useMemo to avoid extra renders
+  const productMap = useMemo(() => {
+    const map = new Map<string, string>();
+    if (!products || products.length === 0) return map;
+    for (const product of products) {
+      product.variants?.forEach((variant) => {
+        if (variant.productVariantId) {
+          map.set(variant.productVariantId, product.name);
+        }
       });
-      setProductMap(map);
     }
+    return map;
   }, [products]);
 
-  useEffect(() => {
-    void fetchUsers({ pageIndex: 1, pageSize: 1000 }).catch(() => {});
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  useEffect(() => {
-    if (users && users.length > 0) {
-      const map = new Map<string, string>();
-      users.forEach((u: UserDto) => {
-        const display = u.fullName && u.fullName.trim().length > 0 ? u.fullName : (u.email || u.userId);
-        if (u.userId) map.set(u.userId, display);
-      });
-      setUserMap(map);
+  const userMap = useMemo(() => {
+    const map = new Map<string, string>();
+    if (!users || users.length === 0) return map;
+    for (const u of users) {
+      const display = u.fullName && u.fullName.trim().length > 0 ? u.fullName : (u.email || u.userId);
+      if (u.userId) map.set(u.userId, display);
     }
+    return map;
   }, [users]);
 
+  // fetch users once (fetchUsers assumed stable from hook)
+  useEffect(() => {
+    // avoid unhandled promise rejection
+    void (async () => {
+      try {
+        await fetchUsers({ pageIndex: 1, pageSize: 1000 });
+      } catch {
+        // ignore fetch errors here (original logic did same)
+      }
+    })();
+  }, [fetchUsers]);
+
   // Helpers آمنين للتعامل مع قيم ممكن تكون undefined/null
-  const safeStr = (s?: string | null) => (s ?? '');
-  const safeLower = (s?: string | null) => (s ?? '').toLowerCase();
+  const safeStr = useCallback((s?: string | null) => (s ?? ''), []);
+  const safeLower = useCallback((s?: string | null) => (s ?? '').toLowerCase(), []);
 
-  const getProductName = (productVariantId?: string | null): string => {
-    if (!productVariantId) return t('na', 'N/A');
-    return productMap.get(productVariantId) || productVariantId;
-  };
+  const getProductName = useCallback(
+    (productVariantId?: string | null): string => {
+      if (!productVariantId) return t('na', 'N/A');
+      return productMap.get(productVariantId) || productVariantId;
+    },
+    [productMap, t]
+  );
 
-  const getUserName = (userId?: string | null): string => {
-    if (!userId) return t('na', 'N/A');
-    return userMap.get(userId) || userId;
-  };
+  const getUserName = useCallback(
+    (userId?: string | null): string => {
+      if (!userId) return t('na', 'N/A');
+      return userMap.get(userId) || userId;
+    },
+    [userMap, t]
+  );
 
-  // ترجمة حالة الطلب مع fallback آمن
-  const getStatusLabel = (status?: string | null) => {
-    const key = `status_${safeLower(status || 'unknown')}`;
-    const defaultText = status ?? t('na', 'N/A');
-    return t(key, defaultText);
-  };
+  const getStatusLabel = useCallback(
+    (status?: string | null) => {
+      const key = `status_${safeLower(status || 'unknown')}`;
+      const defaultText = status ?? t('na', 'N/A');
+      return t(key, defaultText);
+    },
+    [safeLower, t]
+  );
 
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('');
   const [selectedOrder, setSelectedOrder] = useState<OrderDto | null>(null);
   const [orderDetailsLoading, setOrderDetailsLoading] = useState(false);
 
+  // set document dir
   useEffect(() => {
     const dir = (i18n.language || '').startsWith('ar') ? 'rtl' : 'ltr';
     document.documentElement.dir = dir;
   }, [i18n.language]);
 
-  // الآن تقبل undefined وتتحقق
-  const handleDeleteOrder = async (id?: string) => {
-    if (!id) return;
-    const display = getUserName(orders.find(o => o.orderId === id)?.userId) || id;
-    if (window.confirm(t('confirm_delete_order_with_customer', 'Are you sure you want to delete order {{id}} (customer: {{customer}})?', { id: id.slice(0, 8), customer: display }))) {
-      try {
-        await deleteOrder(id);
-      } catch (err) {
-        console.error('Failed to delete order:', err);
+  // stable handlers
+  const handleDeleteOrder = useCallback(
+    async (id?: string) => {
+      if (!id) return;
+      const display = getUserName(orders.find(o => o.orderId === id)?.userId) || id;
+      if (window.confirm(t('confirm_delete_order_with_customer', 'Are you sure you want to delete order {{id}} (customer: {{customer}})?', { id: id.slice(0, 8), customer: display }))) {
+        try {
+          await deleteOrder(id);
+        } catch (err) {
+          console.error('Failed to delete order:', err);
+        }
       }
-    }
-  };
+    },
+    [deleteOrder, getUserName, orders, t]
+  );
 
-  const handleViewOrder = async (orderId?: string) => {
-    if (!orderId) return;
-    setOrderDetailsLoading(true);
-    try {
-      const order = await getOrder(orderId);
-      if (order) setSelectedOrder(order);
-    } catch (err) {
-      console.error('Failed to fetch order details:', err);
-    } finally {
-      setOrderDetailsLoading(false);
-    }
-  };
+  const handleViewOrder = useCallback(
+    async (orderId?: string) => {
+      if (!orderId) return;
+      setOrderDetailsLoading(true);
+      try {
+        const order = await getOrder(orderId);
+        if (order) setSelectedOrder(order);
+      } catch (err) {
+        console.error('Failed to fetch order details:', err);
+      } finally {
+        setOrderDetailsLoading(false);
+      }
+    },
+    [getOrder]
+  );
 
-  const handleSearch = () => {
+  const handleSearch = useCallback(() => {
     setFilters({ status: statusFilter || undefined });
-  };
+  }, [setFilters, statusFilter]);
 
-  const handleClearFilters = () => {
+  const handleClearFilters = useCallback(() => {
     setSearchTerm('');
     setStatusFilter('');
     setFilters({});
-  };
+  }, [setFilters]);
 
-  // فلترة آمنة: استخدم fallback '' قبل toLowerCase/includes
-  const filteredOrders = searchTerm.trim()
-    ? orders.filter(
-        (o) =>
-          safeStr(o.orderId).toLowerCase().includes(searchTerm.toLowerCase()) ||
-          (o.userId && getUserName(o.userId).toLowerCase().includes(searchTerm.toLowerCase())) ||
-          safeStr(o.status).toLowerCase().includes(searchTerm.toLowerCase())
-      )
-    : orders;
+  const handleSearchInput = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchTerm(e.target.value);
+  }, []);
 
-  const visiblePageCount = 5;
-  const half = Math.floor(visiblePageCount / 2);
-  let startPage = Math.max(1, pageIndex - half);
-  const endPage = Math.min(totalPages, startPage + visiblePageCount - 1);
-  if (endPage - startPage + 1 < visiblePageCount) {
-    startPage = Math.max(1, endPage - visiblePageCount + 1);
-  }
-  const pageNumbers: number[] = [];
-  for (let i = startPage; i <= endPage; i++) pageNumbers.push(i);
+  // useDeferredValue-like behaviour: avoid heavy work while typing by memoizing filtered result
+  const deferredSearch = searchTerm.trim();
 
-  // Order Details Modal
+  const filteredOrders = useMemo(() => {
+    const term = deferredSearch.toLowerCase();
+    const filterByTerm = (o: OrderDto) => {
+      if (!term) return true;
+      const matchesId = safeStr(o.orderId).toLowerCase().includes(term);
+      const matchesUser = o.userId ? getUserName(o.userId).toLowerCase().includes(term) : false;
+      const matchesStatus = safeStr(o.status).toLowerCase().includes(term);
+      return matchesId || matchesUser || matchesStatus;
+    };
+
+    const statusFiltered = statusFilter ? orders.filter(o => (o.status || '') === statusFilter) : orders;
+    return statusFiltered.filter(filterByTerm);
+  }, [orders, deferredSearch, statusFilter, getUserName, safeStr]);
+
+  // pagination numbers memoized
+  const pageNumbers = useMemo(() => {
+    const visiblePageCount = 5;
+    const half = Math.floor(visiblePageCount / 2);
+    let startPage = Math.max(1, pageIndex - half);
+    const endPage = Math.min(totalPages, startPage + visiblePageCount - 1);
+    if (endPage - startPage + 1 < visiblePageCount) {
+      startPage = Math.max(1, endPage - visiblePageCount + 1);
+    }
+    const nums: number[] = [];
+    for (let i = startPage; i <= endPage; i++) nums.push(i);
+    return nums;
+  }, [pageIndex, totalPages]);
+
+  // Row click handler (stable ref) - read data attribute
+  const handleRowClick = useCallback((e: React.MouseEvent<HTMLElement>) => {
+    const target = e.currentTarget as HTMLElement;
+    const id = target.getAttribute('data-orderid') || undefined;
+    if (id) handleViewOrder(id);
+  }, [handleViewOrder]);
+
+  // Delete button handler for row (stable ref)
+  const handleDeleteButtonClick = useCallback((e: React.MouseEvent<HTMLElement>) => {
+    e.stopPropagation();
+    const target = e.currentTarget as HTMLElement;
+    const id = target.getAttribute('data-orderid') || undefined;
+    if (id) void handleDeleteOrder(id);
+  }, [handleDeleteOrder]);
+
+  // Actions in order details modal
+  const handleDeleteSelectedOrder = useCallback(async () => {
+    if (!selectedOrder?.orderId) return;
+    await handleDeleteOrder(selectedOrder.orderId);
+    setSelectedOrder(null);
+  }, [handleDeleteOrder, selectedOrder]);
+
+  // Render order details modal if selectedOrder
   if (selectedOrder) {
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
@@ -208,6 +264,14 @@ const OrdersManagement: React.FC = () => {
                     <span className="text-gray-600">{t('name_label', 'Name')}:</span>
                     <span className="ml-2 font-medium">{getUserName(selectedOrder.userId) || t('na', 'N/A')}</span>
                   </div>
+
+                  {/* ===== ADDED: show shippingAddress under the Name (only in modal) ===== */}
+                  <div>
+                    <span className="text-gray-600">{t('address_label', 'Address')}:</span>
+                    <span className="ml-2 font-medium">{safeStr((selectedOrder as any).shippingAddress) || t('na', 'N/A')}</span>
+                  </div>
+                  {/* =================================================================== */}
+
                   <div>
                     <span className="text-gray-600">{t('user_id_label', 'User ID')}:</span>
                     <span className="ml-2 font-medium text-xs text-gray-500">{selectedOrder.userId ?? t('na', 'N/A')}</span>
@@ -305,10 +369,7 @@ const OrdersManagement: React.FC = () => {
                 {t('close', 'Close')}
               </button>
               <button
-                onClick={() => {
-                  handleDeleteOrder(selectedOrder.orderId);
-                  setSelectedOrder(null);
-                }}
+                onClick={handleDeleteSelectedOrder}
                 className="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center gap-2"
               >
                 <Trash2 size={18} />
@@ -338,7 +399,7 @@ const OrdersManagement: React.FC = () => {
               type="text"
               placeholder={t('search_placeholder_orders', 'Search by order ID, user name, or status...')}
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={handleSearchInput}
               className="w-full px-4 py-3 pl-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#5D2D2C] focus:border-transparent"
             />
             <Search className="absolute left-4 top-3.5 text-gray-400" size={20} />
@@ -407,7 +468,8 @@ const OrdersManagement: React.FC = () => {
                   <tr
                     key={order.orderId ?? `order-${idx}`}
                     className="hover:bg-gray-50 cursor-pointer"
-                    onClick={() => order.orderId && handleViewOrder(order.orderId)}
+                    data-orderid={order.orderId}
+                    onClick={handleRowClick}
                   >
                     <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">#{safeStr(order.orderId).slice(0, 8)}</td>
                     <td className="px-3 sm:px-6 py-4 text-sm text-gray-500">
@@ -431,7 +493,8 @@ const OrdersManagement: React.FC = () => {
                     <td className="hidden lg:table-cell px-6 py-4 whitespace-nowrap text-sm text-gray-500">{order.createdAtUtc ? new Date(order.createdAtUtc).toLocaleDateString() : t('na', 'N/A')}</td>
                     <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <button
-                        onClick={(e) => { e.stopPropagation(); if (order.orderId) handleDeleteOrder(order.orderId); }}
+                        data-orderid={order.orderId}
+                        onClick={handleDeleteButtonClick}
                         className="text-red-600 hover:text-red-900"
                         aria-label={t('delete_order', 'Delete Order')}
                       >
@@ -496,4 +559,4 @@ const OrdersManagement: React.FC = () => {
   );
 };
 
-export default OrdersManagement;
+export default React.memo(OrdersManagement);

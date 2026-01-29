@@ -414,29 +414,12 @@ export default function LandingPage() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
                   </svg>
                 </div>
-                <h3 className="text-xl font-bold">GlowStore</h3>
+                <h3 className="text-xl font-bold">بصمه</h3>
               </div>
               <p className="text-gray-400 text-sm sm:text-base mb-4 max-w-sm">
                 {t('footer_tagline') || t('tagline') || 'Your trusted destination for premium beauty and skincare products. Quality guaranteed, beauty delivered.'}
               </p>
-              <div className="flex space-x-4">
-                {[
-                  { name: 'Facebook', icon: 'M18 2h-3a5 5 0 00-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 011-1h3z' },
-                  { name: 'Instagram', icon: 'M16 11.37A4 4 0 1112.63 8 4 4 0 0116 11.37zm1.5-4.87h.01' },
-                  { name: 'Twitter', icon: 'M23 3a10.9 10.9 0 01-3.14 1.53 4.48 4.48 0 00-7.86 3v1A10.66 10.66 0 013 4s-4 9 5 13a11.64 11.64 0 01-7 2c9 5 20 0 20-11.5a4.5 4.5 0 00-.08-.83A7.72 7.72 0 0023 3z' },
-                ].map((social) => (
-                  <a
-                    key={social.name}
-                    href="#"
-                    className="bg-gray-800 hover:bg-[#5D2D2C] p-2.5 rounded-lg transition-colors"
-                    aria-label={social.name}
-                  >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={social.icon} />
-                    </svg>
-                  </a>
-                ))}
-              </div>
+            
             </div>
 
             {/* Quick Links */}
@@ -475,28 +458,21 @@ export default function LandingPage() {
                   <svg className="w-5 h-5 mr-2 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
                   </svg>
-                  {t('footer_phone')}
+                       0566060682
                 </li>
                 <li className="flex items-start">
                   <svg className="w-5 h-5 mr-2 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                   </svg>
-                  {t('footer_email')}
-                </li>
-                <li className="flex items-start">
-                  <svg className="w-5 h-5 mr-2 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                  </svg>
-                  {t('footer_address')}
-                </li>
+                  forsantop@gmail.com
+                </li>         
               </ul>
             </div>
           </div>
 
           <div className="border-t border-gray-800 mt-10 sm:mt-12 pt-8 flex flex-col sm:flex-row justify-between items-center gap-4">
             <p className="text-gray-400 text-xs sm:text-sm text-center sm:text-left">
-              &copy; 2025 GlowStore. {t('all_rights_reserved') || 'All rights reserved.'}
+              &copy; 2025 بصمه. {t('all_rights_reserved') || 'All rights reserved.'}
             </p>
             <div className="flex gap-6 text-gray-400 text-xs sm:text-sm">
               <a href="#" className="hover:text-white transition-colors">{t('footer_privacy_policy')}</a>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useDeferredValue } from 'react';
 import { DollarSign, CreditCard, TrendingUp, Calendar, Search, X, FileText, Package } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { usePayments } from '../../payment/hooks/usePayments';
@@ -21,13 +21,13 @@ const PaymentsManagement: React.FC = () => {
     setPageSize,
   } = usePayments(10);
 
-
   const [searchTerm, setSearchTerm] = useState('');
+  const deferredSearch = useDeferredValue(searchTerm);
   const [statusFilter, setStatusFilter] = useState('');
   const [providerFilter, setProviderFilter] = useState('');
   const [selectedPayment, setSelectedPayment] = useState<PaymentDto | null>(null);
   const [paymentDetailsLoading, setPaymentDetailsLoading] = useState(false);
-  
+
   const visiblePageCount = 5;
 
   useEffect(() => {
@@ -35,66 +35,114 @@ const PaymentsManagement: React.FC = () => {
     document.documentElement.dir = dir;
   }, [i18n.language]);
 
-  const handleViewPayment = async (paymentId: string) => {
-    setPaymentDetailsLoading(true);
-    try {
-      const payment = await getPayment(paymentId);
-      if (payment) {
-        setSelectedPayment(payment);
-      }
-    } catch (err) {
-      console.error('Failed to fetch payment details:', err);
-    } finally {
-      setPaymentDetailsLoading(false);
-    }
-  };
+  /* ================= CALLBACKS ================= */
 
-  const handleApplyFilters = () => {
+  const handleViewPayment = useCallback(
+    async (paymentId?: string) => {
+      if (!paymentId) return;
+      setPaymentDetailsLoading(true);
+      try {
+        const payment = await getPayment(paymentId);
+        if (payment) {
+          setSelectedPayment(payment);
+        }
+      } catch (err) {
+        console.error('Failed to fetch payment details:', err);
+      } finally {
+        setPaymentDetailsLoading(false);
+      }
+    },
+    [getPayment]
+  );
+
+  // stable row click that reads data attribute
+  const handleRowClick = useCallback((e: React.MouseEvent<HTMLElement>) => {
+    const el = e.currentTarget as HTMLElement;
+    const id = el.getAttribute('data-paymentid') || undefined;
+    if (id) void handleViewPayment(id);
+  }, [handleViewPayment]);
+
+  const handleApplyFilters = useCallback(() => {
     setFilters({
       status: statusFilter || undefined,
       provider: providerFilter || undefined,
     });
-  };
+  }, [setFilters, statusFilter, providerFilter]);
 
-  const handleClearFilters = () => {
+  const handleClearFilters = useCallback(() => {
     setSearchTerm('');
     setStatusFilter('');
     setProviderFilter('');
     setFilters({});
-  };
+  }, [setFilters]);
 
-  // Filter payments locally by search term
-  const filteredPayments = searchTerm.trim()
-    ? payments.filter(
-        (p) =>
-          p.paymentId.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          p.orderId?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          p.status.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          p.provider?.toLowerCase().includes(searchTerm.toLowerCase())
-      )
-    : payments;
+  const handleSearchInput = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchTerm(e.target.value);
+  }, []);
 
-  // Statistics - based on all payments
-  const totalAmount = payments.reduce((sum, p) => sum + (p.amount || 0), 0);
-  const completedPayments = payments.filter(p => p.status === 'Completed').reduce((sum, p) => sum + (p.amount || 0), 0);
-  const pendingPayments = payments.filter(p => p.status === 'Pending').reduce((sum, p) => sum + (p.amount || 0), 0);
-  const failedPayments = payments.filter(p => p.status === 'Failed').reduce((sum, p) => sum + (p.amount || 0), 0);
+  const handleSetPageSize = useCallback((size: number) => {
+    setPageSize(size);
+    setPage(1);
+  }, [setPageSize, setPage]);
 
-  const completedCount = payments.filter(p => p.status === 'Completed').length;
-  const pendingCount = payments.filter(p => p.status === 'Pending').length;
-  const failedCount = payments.filter(p => p.status === 'Failed').length;
+  /* ================= MEMO: filteredPayments ================= */
 
-  // Pagination computation
-  const half = Math.floor(visiblePageCount / 2);
-  let startPage = Math.max(1, pageIndex - half);
-  const endPage = Math.min(totalPages, startPage + visiblePageCount - 1);
-  if (endPage - startPage + 1 < visiblePageCount) {
-    startPage = Math.max(1, endPage - visiblePageCount + 1);
-  }
-  const pageNumbers: number[] = [];
-  for (let i = startPage; i <= endPage; i++) pageNumbers.push(i);
+  const filteredPayments = useMemo(() => {
+    const term = deferredSearch.trim().toLowerCase();
+    const matchesTerm = (p: PaymentDto) => {
+      if (!term) return true;
+      const pid = p.paymentId?.toLowerCase() ?? '';
+      const oid = p.orderId?.toLowerCase() ?? '';
+      const status = p.status?.toLowerCase() ?? '';
+      const provider = p.provider?.toLowerCase() ?? '';
+      return pid.includes(term) || oid.includes(term) || status.includes(term) || provider.includes(term);
+    };
 
-  const getStatusColor = (status: string) => {
+    return payments.filter((p) => {
+      if (statusFilter && p.status !== statusFilter) return false;
+      if (providerFilter && p.provider !== providerFilter) return false;
+      return matchesTerm(p);
+    });
+  }, [payments, deferredSearch, statusFilter, providerFilter]);
+
+  /* ================= MEMO: statistics ================= */
+
+  const totalAmount = useMemo(() => payments.reduce((sum, p) => sum + (p.amount || 0), 0), [payments]);
+
+  const completedPayments = useMemo(
+    () => payments.filter(p => p.status === 'Completed').reduce((sum, p) => sum + (p.amount || 0), 0),
+    [payments]
+  );
+  const pendingPayments = useMemo(
+    () => payments.filter(p => p.status === 'Pending').reduce((sum, p) => sum + (p.amount || 0), 0),
+    [payments]
+  );
+  const failedPayments = useMemo(
+    () => payments.filter(p => p.status === 'Failed').reduce((sum, p) => sum + (p.amount || 0), 0),
+    [payments]
+  );
+
+  const completedCount = useMemo(() => payments.filter(p => p.status === 'Completed').length, [payments]);
+  const pendingCount = useMemo(() => payments.filter(p => p.status === 'Pending').length, [payments]);
+  const failedCount = useMemo(() => payments.filter(p => p.status === 'Failed').length, [payments]);
+
+  /* ================= MEMO: pagination numbers ================= */
+
+  const pageNumbers = useMemo(() => {
+    const half = Math.floor(visiblePageCount / 2);
+    let startPage = Math.max(1, pageIndex - half);
+    const endPage = Math.min(totalPages, startPage + visiblePageCount - 1);
+    if (endPage - startPage + 1 < visiblePageCount) {
+      startPage = Math.max(1, endPage - visiblePageCount + 1);
+    }
+    const nums: number[] = [];
+    for (let i = startPage; i <= endPage; i++) nums.push(i);
+    return nums;
+  }, [pageIndex, totalPages, visiblePageCount]);
+
+  /* ================= HELPERS ================= */
+
+  const getStatusColor = useCallback((status: string) => {
     switch (status) {
       case 'Completed':
         return 'bg-green-100 text-green-800';
@@ -105,23 +153,27 @@ const PaymentsManagement: React.FC = () => {
       default:
         return 'bg-gray-100 text-gray-800';
     }
-  };
+  }, []);
 
-  const getMethodIcon = (method?: string) => {
+  const getMethodIcon = useCallback((method?: string) => {
     if (!method) return <DollarSign size={16} className="text-gray-400" />;
     
-    if (method.toLowerCase().includes('card') || method.toLowerCase().includes('stripe')) {
+    const m = method.toLowerCase();
+    if (m.includes('card') || m.includes('stripe')) {
       return <CreditCard size={16} className="text-blue-500" />;
-    } else if (method.toLowerCase().includes('paypal')) {
+    } else if (m.includes('paypal')) {
       return <DollarSign size={16} className="text-blue-600" />;
-    } else if (method.toLowerCase().includes('cash')) {
+    } else if (m.includes('cash')) {
       return <DollarSign size={16} className="text-green-600" />;
     } else {
       return <DollarSign size={16} className="text-purple-600" />;
     }
-  };
+  }, []);
 
-  // Payment Details Modal
+  const isEmpty = payments.length === 0;
+
+  /* ================= MODAL: selectedPayment ================= */
+
   if (selectedPayment) {
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
@@ -242,6 +294,8 @@ const PaymentsManagement: React.FC = () => {
     );
   }
 
+  /* ================= MAIN VIEW ================= */
+
   return (
     <div>
       {/* Header */}
@@ -317,7 +371,7 @@ const PaymentsManagement: React.FC = () => {
               type="text"
               placeholder={t('search_placeholder_payments', 'Search by payment ID, order ID, status, or provider...')}
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={handleSearchInput}
               className="w-full px-4 py-3 pl-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#5D2D2C] focus:border-transparent"
             />
             <Search className="absolute left-4 top-3.5 text-gray-400" size={20} />
@@ -410,7 +464,8 @@ const PaymentsManagement: React.FC = () => {
                     <tr 
                       key={payment.paymentId} 
                       className="hover:bg-gray-50 transition-colors cursor-pointer"
-                      onClick={() => handleViewPayment(payment.paymentId)}
+                      data-paymentid={payment.paymentId}
+                      onClick={handleRowClick}
                     >
                       <td className="px-3 sm:px-6 py-4 whitespace-nowrap">
                         <div className="text-sm font-medium text-gray-900">
@@ -465,10 +520,7 @@ const PaymentsManagement: React.FC = () => {
               <span className="text-sm text-gray-600">{t('rows_per_page', 'Rows per page:')}</span>
               <select
                 value={pageSize}
-                onChange={(e) => {
-                  setPageSize(Number(e.target.value));
-                  setPage(1);
-                }}
+                onChange={(e) => handleSetPageSize(Number(e.target.value))}
                 className="px-3 py-2 border rounded bg-white"
               >
                 <option value={5}>5</option>
@@ -528,7 +580,7 @@ const PaymentsManagement: React.FC = () => {
           </div>
 
           {/* Summary Footer */}
-          {payments.length > 0 && (
+          {!isEmpty && (
             <div className="mt-6 bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl p-4 sm:p-6 border border-gray-200">
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
                 <div>
@@ -564,4 +616,4 @@ const PaymentsManagement: React.FC = () => {
   );
 };
 
-export default PaymentsManagement;
+export default React.memo(PaymentsManagement);
